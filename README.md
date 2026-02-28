@@ -1,63 +1,93 @@
 # Google-Photos
 
-Script PowerShell para transformar a estrutura de pastas local em álbuns no Google Fotos via `rclone`.
+Aplicativo desktop para Windows que executa upload de mídia para Google Fotos via `rclone`, mapeando pastas locais para álbuns.
 
-## Arquivo principal
+## O que existe no projeto
 
-- `gphotos_allinone.ps1`
+- `gphotos_allinone.ps1`: motor de upload (pastas -> álbuns + logs + CSV)
+- `app/gphotos_uploader_gui.py`: interface gráfica (progresso, status e erros)
+- `build_windows.ps1`: build do `.exe` via PyInstaller
+- `installer/GooglePhotosUploader.iss`: instalador via Inno Setup
 
-## O que faz
+## Como funciona
 
-- Lê pastas em `C:\Users\bruno\Meu Drive\Imagens\Fotos`.
-- Pastas de raiz que **não** são `YYYY` viram álbuns diretamente.
-- Pastas `YYYY` são tratadas como agrupadores; suas subpastas viram álbuns.
-- Executa `rclone copy` para `gphotos:album/<Nome do Álbum>`.
-- Gera log por álbum e CSV mestre de execução.
+Estrutura de origem (padrão):
 
-## Requisitos
+`C:\Users\bruno\Meu Drive\Imagens\Fotos`
 
-- Windows PowerShell.
-- `rclone` instalado e no `PATH`.
-- Remote `gphotos:` configurado e autenticado.
-- Diretórios:
-  - `C:\rclone\scripts`
-  - `C:\rclone\logs`
+- Pastas na raiz que **não** são ano (`YYYY`) viram álbuns diretamente.
+- Pastas `YYYY` são agrupadores; cada subpasta vira álbum.
 
-## Execução
+Para cada álbum, o script chama `rclone copy` para:
+
+`gphotos:album/<Nome do Álbum>`
+
+Com proteção de retomada:
+
+- `--ignore-existing`
+- `--size-only`
+
+## Rodar como script (modo atual)
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\rclone\scripts\gphotos_allinone.ps1"
 ```
 
-Teste com limite de álbuns:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\rclone\scripts\gphotos_allinone.ps1" -MaxAlbums 5
-```
-
-Simulação (sem envio):
+Teste seguro:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\rclone\scripts\gphotos_allinone.ps1" -MaxAlbums 1 -DryRun
 ```
 
-## Retomada após travar/desligar
+## Rodar como programa `.exe` no Windows
 
-A retomada é idempotente: basta executar novamente o mesmo comando.
+### Pré-requisitos da máquina de build
 
-Isso funciona por causa de:
+- Python 3.10+
+- PowerShell
+- `rclone` instalado e com remote `gphotos:` já autenticado
 
-- `--ignore-existing`
-- `--size-only`
+### Build do executável
 
-Assim, os arquivos já existentes no destino são pulados e o restante continua.
+No PowerShell, dentro deste repositório:
 
-## Logs e relatório
+```powershell
+.\build_windows.ps1
+```
+
+Saída esperada:
+
+- `dist\GooglePhotosUploader.exe`
+
+### O que a interface mostra
+
+- progresso por álbum (`[idx/total]`)
+- álbum atual em execução
+- log completo em tempo real
+- status final (sucesso/falhas)
+- linhas de erro destacadas no status
+
+## Gerar instalador (`.exe` instalável)
+
+1. Instale o **Inno Setup** na máquina Windows.
+2. Abra `installer/GooglePhotosUploader.iss` no Inno Setup Compiler.
+3. Compile.
+
+Saída esperada:
+
+- `installer\GooglePhotosUploaderSetup.exe`
+
+Esse setup instala:
+
+- `GooglePhotosUploader.exe`
+- `gphotos_allinone.ps1`
+
+## Logs e rastreabilidade
 
 - Logs por álbum: `C:\rclone\logs\gphotos_<timestamp>_<seq>_<album>.log`
-- Relatório mestre: `C:\rclone\logs\gphotos_allinone_<timestamp>.csv`
+- CSV mestre: `C:\rclone\logs\gphotos_allinone_<timestamp>.csv`
 
-Para inspecionar erro de um álbum:
+Inspeção rápida de erro:
 
 ```powershell
 Get-Content "C:\rclone\logs\<log-do-album>.log" -Tail 120
