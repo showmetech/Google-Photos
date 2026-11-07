@@ -1,5 +1,5 @@
 #ifndef ProductVersion
-#define ProductVersion "2026.11.7.1"
+#define ProductVersion "2026.11.7.2"
 #endif
 [Setup]
 #ifdef TestBuild

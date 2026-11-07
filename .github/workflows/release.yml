@@ -83,13 +83,21 @@ jobs:
             python scripts/package_msix.py --architecture $arch --makeappx $packager @identityArgs
             if($LASTEXITCODE -ne 0){throw 'MSIX validation failed'}
           }
+      - name: Bundle both architectures for a single Store submission
+        shell: pwsh
+        run: |
+          $packager=(Get-ChildItem .tools -Filter makeappx.exe -Recurse | Where-Object FullName -match '\\x64\\' | Select-Object -First 1).FullName
+          python scripts/bundle_msix.py --makeappx $packager
+          if($LASTEXITCODE -ne 0){throw 'Bundle validation failed'}
       - name: Record exact artifact digests
         shell: pwsh
-        run: Get-ChildItem artifacts/packages -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Set-Content artifacts/packages/SHA256SUMS.txt
+        run: Get-ChildItem artifacts/packages -File | Where-Object Extension -ne '.log' | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Set-Content artifacts/packages/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: photos-release
-          path: artifacts/packages/*
+          path: |
+            artifacts/packages/*
+            !artifacts/packages/*.log
           retention-days: 30
   github-release:
     needs: build
@@ -153,6 +161,8 @@ jobs:
         run: |
           msstore reconfigure --tenantId "$env:TENANT" --sellerId "$env:SELLER" --clientId "$env:CLIENT" --clientSecret "$env:CLIENT_SECRET"
           if($LASTEXITCODE -ne 0){throw 'Store authentication failed'}
-          msstore publish packages -id "$env:PRODUCT"
+          $upload=Get-ChildItem packages -Filter '*.msixupload'
+          if(@($upload).Count -ne 1){throw 'Expected one multi-architecture Store upload'}
+          msstore publish packages --inputFile "$($upload.FullName)" -id "$env:PRODUCT"
           if($LASTEXITCODE -ne 0){throw 'Store submission failed'}
           'Submitted for certification. This is not proof that the release is live.' >> $env:GITHUB_STEP_SUMMARY
