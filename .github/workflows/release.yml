@@ -99,8 +99,27 @@ jobs:
             artifacts/packages/*
             !artifacts/packages/*.log
           retention-days: 30
+  publishing-prerequisites:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block publication until both distribution accounts are ready
+        env:
+          RELEASE_ENABLED: ${{ vars.RELEASE_PUBLISHING_ENABLED }}
+          IDENTITY: ${{ vars.MSSTORE_IDENTITY_JSON }}
+          PRODUCT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          TENANT: ${{ secrets.AZURE_AD_TENANT_ID }}
+          CLIENT: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          SELLER: ${{ secrets.SELLER_ID }}
+        run: |
+          missing=0
+          for name in RELEASE_ENABLED IDENTITY PRODUCT TENANT CLIENT CLIENT_SECRET SELLER; do
+            if [ -z "${!name}" ]; then echo "::error::Publication blocked: missing $name"; missing=1; fi
+          done
+          if [ "$RELEASE_ENABLED" != "true" ]; then echo '::error::Release publishing has not been confirmed after the GitHub Releases permission rejection'; missing=1; fi
+          exit "$missing"
   github-release:
-    needs: build
+    needs: [build, publishing-prerequisites]
     runs-on: ubuntu-latest
     permissions:
       contents: write

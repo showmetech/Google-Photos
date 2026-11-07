@@ -16,7 +16,7 @@ UI translations: Portuguese, English and Spanish; other languages use English fa
 
 `release.json` is the version source. Every change to `main` triggers `.github/workflows/release.yml`: validate backend, build x64/ARM64, assemble a clean bundled runtime, create installer and MSIX, publish a GitHub release, then submit the same version to Microsoft Store. Increment the version for each release; an existing version cannot silently move to another commit.
 
-The Store job deliberately fails with a precise missing prerequisite until Partner Center is configured. It never submits the development identity. A successful submission still requires Microsoft's certification before becoming live. See [publishing instructions](docs/PUBLISHING.md), [privacy](PRIVACY.md), and [third-party notices](THIRD_PARTY.md).
+The publishing-prerequisites job deliberately fails with precise missing requirements until GitHub Releases permission and Partner Center are configured. It never submits the development identity. A successful submission still requires Microsoft's certification before becoming live. See [publishing instructions](docs/PUBLISHING.md), [privacy](PRIVACY.md), and [third-party notices](THIRD_PARTY.md).
 
 Local app updates must use `scripts/release.ps1`. Direct binary copying bypasses the release process and must not be described as a synchronized release. The local command checks the remote commit and CI state before installing a GitHub release asset. Microsoft Store editions receive their updates from Microsoft Store; do not replace files inside WindowsApps.
 

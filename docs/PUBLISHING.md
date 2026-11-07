@@ -29,3 +29,7 @@ Builds: x64 and ARM64 UI, self-contained .NET, x64 bundled Python/rclone on both
 - https://learn.microsoft.com/windows/msix/desktop/desktop-to-uwp-manual-conversion
 - https://learn.microsoft.com/uwp/api/windows.applicationmodel.startuptask
 - https://rclone.org/googlephotos/
+
+## Current publishing access gate
+
+The first hosted build passed, but GitHub rejected the release creation API with `403 Resource not accessible by integration`, although the job log listed `Contents: write`. No alternate token or identity was used. An administrator must reconcile that effective publishing permission. Set repository variable `RELEASE_PUBLISHING_ENABLED=true` only after that reconciliation and Store credentials/identity are ready. The publishing-prerequisites job prevents new publishing attempts and desktop installation while these requirements remain unresolved. Source publication and build artifacts remain separate from public Releases.
