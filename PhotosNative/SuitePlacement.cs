@@ -1,0 +1,12 @@
+using System;using System.Windows;using System.Windows.Interop;using System.Windows.Media;using System.Runtime.InteropServices;
+internal static class SuitePlacement {
+ public static void PrepareWidget(Window widget){var hwnd=new WindowInteropHelper(widget).Handle;if(hwnd==IntPtr.Zero||!GetWindowRect(hwnd,out var r))return;var info=new Info{Size=Marshal.SizeOf<Info>()};if(!GetMonitorInfo(MonitorFromWindow(hwnd,2),ref info))return;var dpi=VisualTreeHelper.GetDpi(widget);double work=(info.Work.Bottom-info.Work.Top)/dpi.DpiScaleY;double height=Math.Min(600,work-24);if(work-height-36<200)height=Math.Max(1,(work-36)*.45);widget.Height=height;widget.UpdateLayout();int h=(int)Math.Round(height*dpi.DpiScaleY);SetWindowPos(hwnd,IntPtr.Zero,r.Left,info.Work.Bottom-(int)Math.Round(12*dpi.DpiScaleY)-h,r.Right-r.Left,h,0x14);}
+ public static void Above(Window widget,Window panel){var wh=new WindowInteropHelper(widget).Handle;var ph=new WindowInteropHelper(panel).EnsureHandle();if(!GetWindowRect(wh,out var r))return;var info=new Info{Size=Marshal.SizeOf<Info>()};if(!GetMonitorInfo(MonitorFromWindow(wh,2),ref info))return;var dpi=VisualTreeHelper.GetDpi(widget);int gap=(int)Math.Round(12*dpi.DpiScaleY),top=info.Work.Top+gap,height=Math.Max(1,r.Top-gap-top);panel.Width=widget.ActualWidth;panel.Height=height/dpi.DpiScaleY;panel.UpdateLayout();SetWindowPos(ph,IntPtr.Zero,r.Left,top,r.Right-r.Left,height,0x14);}
+ public static bool IsAbove(Window widget,Window? panel){if(panel==null||!GetWindowRect(new WindowInteropHelper(widget).Handle,out var w)||!GetWindowRect(new WindowInteropHelper(panel).Handle,out var p))return false;var dpi=VisualTreeHelper.GetDpi(widget);return Math.Abs(w.Left-p.Left)<=1&&Math.Abs(w.Right-p.Right)<=1&&Math.Abs(w.Top-p.Bottom-12*dpi.DpiScaleY)<=2;}
+ [StructLayout(LayoutKind.Sequential)]struct Rect{public int Left,Top,Right,Bottom;}
+ [StructLayout(LayoutKind.Sequential)]struct Info{public int Size;public Rect Monitor,Work;public uint Flags;}
+ [DllImport("user32.dll")]static extern bool GetWindowRect(IntPtr hwnd,out Rect r);
+ [DllImport("user32.dll")]static extern IntPtr MonitorFromWindow(IntPtr hwnd,uint flags);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern bool GetMonitorInfo(IntPtr hwnd,ref Info info);
+ [DllImport("user32.dll")]static extern bool SetWindowPos(IntPtr hwnd,IntPtr after,int x,int y,int width,int height,uint flags);
+}

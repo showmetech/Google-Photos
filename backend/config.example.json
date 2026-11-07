@@ -1,0 +1,21 @@
+{
+  "photos_root": "",
+  "rclone_remote": "gphotos",
+  "rclone_exe": "tools\\rclone\\rclone.exe",
+  "rclone_config": "data\\rclone.conf",
+  "database": "data\\gphotos_uploader.sqlite",
+  "logs_dir": "logs",
+  "audit_dir": "audit",
+  "transfers": 1,
+  "checkers": 1,
+  "retries": 1,
+  "low_level_retries": 1,
+  "allow_create_remote_albums": false,
+  "dry_run": true,
+  "auto_monitor_enabled": false,
+  "auto_monitor_interval_minutes": 15,
+  "min_file_age_seconds": 120,
+  "album_retries": 3,
+  "blocked_albums": [],
+  "upload_root_files": true
+}

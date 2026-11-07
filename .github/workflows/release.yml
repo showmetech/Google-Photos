@@ -1,0 +1,158 @@
+name: Build, release and submit to Microsoft Store
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: photos-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.15'
+          architecture: x64
+      - id: version
+        shell: pwsh
+        run: |
+          $v=(Get-Content release.json | ConvertFrom-Json).version
+          "value=$v" >> $env:GITHUB_OUTPUT
+          if (([xml](Get-Content PhotosNative/PhotosNative.csproj)).Project.PropertyGroup.Version -ne $v) { throw 'Release versions differ' }
+      - name: Install pinned backend dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Validate portability, history and recovery
+        shell: pwsh
+        run: |
+          foreach($test in 'test_portability.py','test_confirmations.py','test_migration.py','test_service.py','test_supervisor.py') {
+            python $test
+            if($LASTEXITCODE -ne 0){throw "Failed: $test"}
+          }
+      - name: Build both Windows architectures
+        shell: pwsh
+        run: |
+          foreach($arch in 'x64','arm64') {
+            dotnet publish PhotosNative/PhotosNative.csproj -c Release -r "win-$arch" --self-contained true -o "artifacts/native-$arch"
+            if($LASTEXITCODE -ne 0){throw 'Native build failed'}
+          }
+      - name: Obtain official rclone release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v=(Get-Content release.json | ConvertFrom-Json).rclone
+          New-Item -ItemType Directory .tools -Force | Out-Null
+          gh release download "v$v" --repo rclone/rclone --pattern "rclone-v$v-windows-amd64.zip" --pattern SHA256SUMS --dir .tools
+          if($LASTEXITCODE -ne 0){throw 'Official rclone download failed'}
+          $archive=Get-Item ".tools/rclone-v$v-windows-amd64.zip"
+          $expected=(Get-Content .tools/SHA256SUMS | Where-Object { $_ -match [regex]::Escape($archive.Name) } | Select-Object -First 1).Split(' ',[StringSplitOptions]::RemoveEmptyEntries)[0]
+          if((Get-FileHash $archive.FullName).Hash.ToLower() -ne $expected.ToLower()){throw 'rclone SHA-256 mismatch'}
+      - name: Assemble clean runtime
+        shell: pwsh
+        run: |
+          $v=(Get-Content release.json | ConvertFrom-Json).rclone
+          python scripts/build_runtime.py --seed "$env:pythonLocation" --rclone-archive ".tools/rclone-v$v-windows-amd64.zip"
+      - name: Install packaging tools
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          nuget install Microsoft.Windows.SDK.BuildTools -Version 10.0.26100.4654 -OutputDirectory .tools -NonInteractive
+      - name: Package desktop installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DProductVersion=${{ steps.version.outputs.value }}" Installer.iss
+          if($LASTEXITCODE -ne 0){throw 'Installer failed'}
+      - name: Package MSIX with verified identity or development marker
+        shell: pwsh
+        env:
+          STORE_IDENTITY: ${{ vars.MSSTORE_IDENTITY_JSON }}
+        run: |
+          $packager=(Get-ChildItem .tools -Filter makeappx.exe -Recurse | Where-Object FullName -match '\\x64\\' | Select-Object -First 1).FullName
+          $identityArgs=@('--development')
+          if($env:STORE_IDENTITY){[IO.File]::WriteAllText('store/identity.json',$env:STORE_IDENTITY);$identityArgs=@('--identity','store/identity.json')}
+          foreach($arch in 'x64','arm64') {
+            python scripts/package_msix.py --architecture $arch --makeappx $packager @identityArgs
+            if($LASTEXITCODE -ne 0){throw 'MSIX validation failed'}
+          }
+      - name: Record exact artifact digests
+        shell: pwsh
+        run: Get-ChildItem artifacts/packages -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Set-Content artifacts/packages/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photos-release
+          path: artifacts/packages/*
+          retention-days: 30
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: photos-release
+          path: packages
+      - name: Publish one immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$RELEASE_VERSION"
+          if git rev-parse "$tag^{commit}" >/dev/null 2>&1; then
+            test "$(git rev-parse "$tag^{commit}")" = "$GITHUB_SHA" || { echo 'Version already belongs to another commit; increment release.json'; exit 1; }
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" packages/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Google Photos Uploader $RELEASE_VERSION" --generate-notes
+          fi
+  microsoft-store:
+    needs: [build, github-release]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: photos-release
+          path: packages
+      - name: Require the existing Partner Center product and publishing identity
+        shell: pwsh
+        env:
+          IDENTITY: ${{ vars.MSSTORE_IDENTITY_JSON }}
+          PRODUCT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          TENANT: ${{ secrets.AZURE_AD_TENANT_ID }}
+          CLIENT: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          SELLER: ${{ secrets.SELLER_ID }}
+        run: |
+          foreach($name in 'IDENTITY','PRODUCT','TENANT','CLIENT','CLIENT_SECRET','SELLER') {
+            if(-not [Environment]::GetEnvironmentVariable($name)){throw "Store submission blocked: missing $name. No Store publication has occurred."}
+          }
+          if(Get-ChildItem packages -Filter '*-development.msix'){throw 'Development identity cannot be submitted'}
+          if(($env:IDENTITY | ConvertFrom-Json).productId -ne $env:PRODUCT){throw 'Partner Center identity/product mismatch'}
+      - uses: microsoft/microsoft-store-apppublisher@v1.1
+      - name: Submit release packages for Microsoft certification
+        shell: pwsh
+        env:
+          PRODUCT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          TENANT: ${{ secrets.AZURE_AD_TENANT_ID }}
+          CLIENT: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          SELLER: ${{ secrets.SELLER_ID }}
+        run: |
+          msstore reconfigure --tenantId "$env:TENANT" --sellerId "$env:SELLER" --clientId "$env:CLIENT" --clientSecret "$env:CLIENT_SECRET"
+          if($LASTEXITCODE -ne 0){throw 'Store authentication failed'}
+          msstore publish packages -id "$env:PRODUCT"
+          if($LASTEXITCODE -ne 0){throw 'Store submission failed'}
+          'Submitted for certification. This is not proof that the release is live.' >> $env:GITHUB_STEP_SUMMARY
