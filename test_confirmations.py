@@ -16,6 +16,17 @@ with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
     env['time'].sleep=lambda value:None
     selections=[]
     def fake_run(cmd,log_file=None,cfg=None,file_lookup=None,on_confirmed=None):
+        assert '--include' not in cmd and '--exclude' not in cmd,cmd
+        # Exercise the real rclone parser with the generated flags, without
+        # contacting Google or copying user media. This caught the production
+        # include/files-from-raw conflict that mocked transfer output missed.
+        executable=os.environ.get('RCLONE_TEST_EXE')
+        if executable and not selections:
+            offset=cmd.index('copy')
+            probe=subprocess.run([executable,'copy',str(album),str(root/'probe')]+cmd[offset+3:]+['--dry-run'],capture_output=True,text=True)
+            assert probe.returncode==0,probe.stderr
+            assert 'a.jpg' in probe.stderr and 'b.jpg' in probe.stderr,probe.stderr
+            results['real_rclone_accepts_generated_selection_flags']=True
         names=Path(cmd[cmd.index('--files-from-raw')+1]).read_text(encoding='utf-8').splitlines();selections.append(names)
         chosen='a.jpg' if len(selections)==1 else 'b.jpg'
         assert on_confirmed(file_lookup[chosen])

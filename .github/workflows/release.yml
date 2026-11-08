@@ -61,6 +61,15 @@ jobs:
         run: |
           $v=(Get-Content release.json | ConvertFrom-Json).rclone
           python scripts/build_runtime.py --seed "$env:pythonLocation" --rclone-archive ".tools/rclone-v$v-windows-amd64.zip"
+        # Run the generated upload flags through the actual packaged rclone.
+        # A mocked transfer cannot detect incompatible global filters.
+        # This probe uses local fixtures and --dry-run, never Google Photos.
+      - name: Validate real rclone selection parser
+        shell: pwsh
+        run: |
+          $env:RCLONE_TEST_EXE=(Resolve-Path 'artifacts/shared/tools/rclone/rclone.exe').Path
+          python test_confirmations.py
+          if($LASTEXITCODE -ne 0){throw 'rclone selection regression'}
       - name: Install packaging tools
         shell: pwsh
         run: |

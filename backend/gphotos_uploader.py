@@ -517,7 +517,8 @@ def upload(cfg: dict, album_filter: str | None) -> int:
         staged, source_dir, file_lookup = stage_pending_files(album, pending_paths,{str(path):db.execute("select fingerprint from media where path=?",(str(path),)).fetchone()[0] for path in pending_paths})
         cmd = rclone_args(cfg, app_root(),
             "copy", str(source_dir), f"{cfg['rclone_remote']}:album/{album}",
-            "--include", "*.{jpg,jpeg,png,gif,heic,heif,webp,bmp,tif,tiff,avif,ico,dng,cr2,cr3,crw,nef,arw,rw2,orf,raf,srw,pef,mp4,mov,avi,m4v,mts,m2ts,m2t,3gp,3g2,wmv,mpg,mpeg,webm,asf,divx,mkv,mmv,mod,tod}",
+            # The inventory already validates media extensions. files-from-raw
+            # selects only pending files and cannot be combined with include.
             "--ignore-case",
             "--ignore-times",
             "--transfers", str(cfg.get("transfers", 8)),
