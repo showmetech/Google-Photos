@@ -126,7 +126,7 @@ public partial class MainWindow:Window {
   if(lastReceipt.Length>0)error.Text=lastReceipt;
   string path=Path.Combine(Paths.Data,"native-last-preview.jpg");if(!File.Exists(path))path=Path.Combine(Paths.Data,"last_uploaded_preview.jpg");string stamp=File.Exists(path)?File.GetLastWriteTimeUtc(path).Ticks.ToString():"";
   var previewReceipt=Read(Path.Combine(Paths.Data,"native-preview-source.json"));bool previewValid=previewReceipt.Count==0||(previewReceipt["ready"]?.GetValue<bool>()==true && previewReceipt["source"]?.ToString()==state["last_uploaded_file"]?.ToString());if(!previewValid){photo.Source=null;photoStamp="";}
-  if(previewValid&&stamp!=photoStamp&&stamp.Length>0){try{var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.UriSource=new Uri(path);bitmap.EndInit();bitmap.Freeze();photo.Source=bitmap;photoStamp=stamp;}catch(IOException){}}
+  if(previewValid&&stamp!=photoStamp&&stamp.Length>0){try{using var stream=new MemoryStream(File.ReadAllBytes(path));var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.StreamSource=stream;bitmap.EndInit();bitmap.Freeze();photo.Source=bitmap;photoStamp=stamp;}catch(IOException){}}
   previewPlaceholder.Visibility=photo.Source==null?Visibility.Visible:Visibility.Collapsed;
   origin.Text=cfg["photos_root"]?.ToString()??"Origem não configurada";
   var roots=cfg["photos_roots"] as JsonArray;

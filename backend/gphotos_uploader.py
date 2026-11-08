@@ -443,7 +443,7 @@ def mark_baseline(cfg: dict, note: str | None) -> int:
 
 def upload(cfg: dict, album_filter: str | None) -> int:
     stats = scan(cfg)
-    write_status(cfg, phase="scan", current_album="", current_file="", current_file_name="", pending_files=stats["pending_files"])
+    write_status(cfg, phase="scan", current_album="", current_file="", current_file_name="", pending_files=stats["pending_files"], last_error="")
     print(f"Inventario: {stats['media_files']} midias, {stats['albums']} albuns, {stats['pending_files']} pendentes.")
     db = connect_db(cfg)
     pattern = source_pattern(cfg)
@@ -549,6 +549,8 @@ def upload(cfg: dict, album_filter: str | None) -> int:
                     now=datetime.now().isoformat(timespec="seconds")
                     db.execute("update media set status='uploaded',uploaded_at=coalesce(uploaded_at,?),last_error=null,evidence_kind='rclone_individual_confirmation' where path=?",(now,path))
                     db.commit()
+                    pending=db.execute("select count(*) from media where status!='uploaded' and size>0 and present=1 and in_sources(path) and path like ? escape '!'",(pattern,)).fetchone()[0]
+                    write_status(cfg,pending_files=pending)
                     return True
                 result = run(cmd+["--files-from-raw",str(selection)], log_file, cfg=cfg, file_lookup=file_lookup,on_confirmed=None if dry else checkpoint)
 

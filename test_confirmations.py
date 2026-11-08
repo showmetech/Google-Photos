@@ -30,6 +30,9 @@ with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
         names=Path(cmd[cmd.index('--files-from-raw')+1]).read_text(encoding='utf-8').splitlines();selections.append(names)
         chosen='a.jpg' if len(selections)==1 else 'b.jpg'
         assert on_confirmed(file_lookup[chosen])
+        state=json.loads(Path(cfg['database']).with_name('current_status.json').read_text(encoding='utf-8'))
+        assert state['pending_files']==(1 if chosen=='a.jpg' else 0),state
+        assert state['last_error']=='',state
         with contextlib.closing(sqlite3.connect(cfg['database'])) as db:
             assert db.execute('select status from media where path=?',(file_lookup[chosen],)).fetchone()[0]=='uploaded'
         return subprocess.CompletedProcess(cmd,1 if len(selections)==1 else 0,f'2026/10/22 12:00:00 INFO  : {chosen}: Copied (new)\n','')
