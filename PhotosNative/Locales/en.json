@@ -148,5 +148,14 @@
   "Registrado para iniciar na bandeja.": "Registered to start in the tray.",
   "Reconectar": "Reconnect",
   "Pastas e monitor: OK": "Folders and monitor: OK",
-  "Há itens que precisam de atenção.": "Some items need attention."
+  "Há itens que precisam de atenção.": "Some items need attention.",
+  "Conferência online": "Online verification",
+  "Comparar pastas com álbuns online": "Compare folders with online albums",
+  "Abrir relatório da conferência": "Open verification report",
+  "Reenviar ausências comprovadas": "Re-upload confirmed missing items",
+  "Limites da conferência": "Verification limits",
+  "Importar inventário do histórico…": "Import historical inventory…",
+  "Online conferido: {0} · Ainda sem comprovação: {1}": "Verified online: {0} · Still unverified: {1}",
+  "A API não permite conferir todo o histórico. Abra o relatório da conferência.": "The API cannot verify the entire historical library. Open the verification report.",
+  "A API só permite consultar conteúdo criado por este cliente. Histórico não visível não significa ausente. Nomes e contagens não comprovam integridade binária. Só itens anteriormente observados por ID, com recibo local inalterado e ausência confirmada em consulta completa, podem ser reenviados. Outros casos precisam de conferência no Google Fotos.": "The API only exposes app-created content. Invisible historical albums are not missing. Names and counts do not prove binary integrity. Only previously observed stable IDs with unchanged local receipts and confirmed absence in complete reads can be re-uploaded. Other cases need verification in Google Photos."
 }

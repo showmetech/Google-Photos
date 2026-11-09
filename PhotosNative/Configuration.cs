@@ -48,6 +48,16 @@ public partial class MainWindow {
   var connect=SettingsAction("\uE8A7","Conectar",()=>Command("connect"));connect.ToolTip=Locale.Text("Conectar ou reconectar no navegador");connectAccount=connect;settingsOperations.Add(connect);
   var test=SettingsAction("\uE73E","Testar acesso",()=>Command("doctor"));test.ToolTip=Locale.Text("Testar acesso ao Google Fotos");settingsOperations.Add(test);account.Children.Add(ActionPair(connect,test));
   var syncCard=SettingsCard(section,"\uE895","Sincronização",out var syncHead);
+  var online=MenuButton("Conferência online",()=>{
+   var menu=NewSettingsMenu();bool idle=!(Read(Path.Combine(Paths.Data,"ui-service-status.json"))["busy"]?.GetValue<bool>()??false);
+   AddMenu(menu,"Comparar pastas com álbuns online",()=>Command("reconcile"),idle);
+   AddMenu(menu,"Abrir relatório da conferência",()=>OpenLocal(Path.Combine(Paths.Home,"audit","online-reconciliation.html")),File.Exists(Path.Combine(Paths.Home,"audit","online-reconciliation.html")));
+   AddMenu(menu,"Importar inventário do histórico…",()=>{var file=new OpenFileDialog{Title=Locale.Text("Importar inventário do histórico…"),Filter="JSON (*.json)|*.json",CheckFileExists=true};if(file.ShowDialog(panel)==true)Send(new{command="reconcile",inventory=file.FileName});},idle);
+   var comparison=Read(Path.Combine(Paths.Data,"online-reconciliation-summary.json"));
+   AddMenu(menu,"Reenviar ausências comprovadas",()=>Command("repair-online"),idle&&(comparison["repair_candidates"]?.GetValue<int>()??0)>0);
+   AddMenu(menu,"Limites da conferência",()=>ShowSettingsDetails("Conferência online",Locale.Text("A API só permite consultar conteúdo criado por este cliente. Histórico não visível não significa ausente. Nomes e contagens não comprovam integridade binária. Só itens anteriormente observados por ID, com recibo local inalterado e ausência confirmada em consulta completa, podem ser reenviados. Outros casos precisam de conferência no Google Fotos.")));
+   return menu;
+  });DockPanel.SetDock(online,Dock.Right);syncHead.Children.Insert(0,online);
   var results=SettingsIcon("\uE9D9","Resultado do último teste",()=>ShowSettingsDetails("Resultado do último teste",diagnosticDetails.Length>0?diagnosticDetails:diagnosticResult.Text.Length>0?diagnosticResult.Text:Locale.Text("Nenhum teste realizado nesta tela.")));DockPanel.SetDock(results,Dock.Right);syncHead.Children.Insert(0,results);
   syncToggle=new CheckBox{Content=Locale.Text("Sincronização automática"),Margin=new(0,6,0,0),FontSize=13};syncToggle.Click+=(_,_)=>Command("automatic",syncToggle.IsChecked==true);syncCard.Children.Add(syncToggle);
   syncCard.Children.Add(SettingsCaption("Novos arquivos · a cada 15 minutos"));
@@ -98,6 +108,12 @@ public partial class MainWindow {
   foreach(var button in settingsOperations)button.IsEnabled=!busy;
   if(connectAccount?.Content is StackPanel connectContent && connectContent.Children.OfType<TextBlock>().LastOrDefault() is TextBlock connectLabel){connectLabel.Text=Locale.Text(connected?"Reconectar":"Conectar");AutomationProperties.SetName(connectAccount,connectLabel.Text);}
   RefreshStartup();
+  if(!busy&&worker["operation"]?.ToString() is "reconcile" or "repair-online"){
+   var report=Read(Path.Combine(Paths.Data,"online-reconciliation-summary.json"));var evidence=report["counts"] as JsonObject;
+   int verified=evidence?["receipt_and_online"]?.GetValue<int>()??0;int total=report["local_files"]?.GetValue<int>()??0;
+   diagnosticResult.Text=Locale.Format("Online conferido: {0} · Ainda sem comprovação: {1}",verified,Math.Max(0,total-verified));
+   diagnosticDetails=diagnosticResult.Text+"\n\n"+Locale.Text("A API não permite conferir todo o histórico. Abra o relatório da conferência.");
+  }
   configurationInfo.Text=Locale.Format("Dados locais: {0}\nWindows: {1} · App: {2}\nIdioma da interface: {3}",Paths.Home,RuntimeInformation.OSArchitecture,RuntimeInformation.ProcessArchitecture,Locale.EffectiveLanguage);
  }
  void RefreshStartup(){

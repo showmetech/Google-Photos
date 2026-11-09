@@ -120,7 +120,7 @@ public partial class MainWindow:Window {
    var receipt=Read(Path.Combine(Paths.Data,"ui-receipts",id+".json"));if(receipt.Count==0)continue;
    if(receipt["ok"]?.GetValue<bool>()==false){outstanding.Remove(id);lastReceipt=receipt["error"]?.ToString()??Locale.Text("Falha na operação");}
    else if(receipt["completed"]?.GetValue<bool>()==true){outstanding.Remove(id);diagnosticResult.Text=Locale.Format("Operação: {0} · Resultado: {1}",receipt["command"]?.ToString()??"",receipt["exit_code"]?.ToString()??"—");}
-   else if(receipt["command"]?.ToString() is "scan" or "doctor" or "upload" or "mark-baseline")diagnosticResult.Text=Locale.Text("Operação aceita. Aguardando conclusão…");
+   else if(receipt["command"]?.ToString() is "scan" or "doctor" or "upload" or "mark-baseline" or "reconcile" or "repair-online")diagnosticResult.Text=Locale.Text("Operação aceita. Aguardando conclusão…");
    else outstanding.Remove(id);
   }
   if(lastReceipt.Length>0)error.Text=lastReceipt;

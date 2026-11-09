@@ -103,6 +103,15 @@ class Service(Base):
             receipt.update(completed=True,exit_code=code,completed_at=time.time())
             atomic_json(target,receipt)
             self.active_request=None
+        if self.operation=='upload' and self.auto_monitor_enabled and account_configured(self.cfg,root):
+            self.after(2000,self.reconcile_when_idle)
+    def reconcile_when_idle(self):
+        if self.retiring or not self.auto_monitor_enabled or not account_configured(self.cfg,root):return
+        previous=module['load_json'](state_root/'data'/'online-reconciliation-summary.json',{})
+        interval=86400 if previous.get('albums_complete') and previous.get('library_complete') else 3600
+        if time.time()-previous.get('checked_at',0)<interval:return
+        if self.is_busy():return
+        self.run_command(['reconcile'])
     def bridge_tick(self):
         try:
             self.native_preview()
@@ -142,13 +151,15 @@ class Service(Base):
                             self.connect_account(remote.get("client_id",""),remote.get("client_secret",""))
                         busy=self.auth_process is not None and self.auth_process.poll() is None
                         if not busy:raise ValueError(self.banner_var.get())
-                    elif command in ('scan','upload','doctor','mark-baseline'):
+                    elif command in ('scan','upload','doctor','mark-baseline','reconcile','repair-online'):
                         if busy:raise ValueError('Another operation is already running. Wait for completion.')
                         if command=='mark-baseline' and request.get('confirmed_existing') is not True:
                             raise ValueError('An explicit declaration is required before recording an existing library.')
-                        if command=='upload' and not account_configured(self.cfg,root):raise ValueError('Connect your Google Photos account first.')
+                        if command in ('upload','reconcile','repair-online') and not account_configured(self.cfg,root):raise ValueError('Connect your Google Photos account first.')
                         self.active_request=path.stem;self.operation=command
                         arguments=[command]+(['--live'] if command=='upload' else [])
+                        if command=='reconcile' and request.get('inventory'):
+                            arguments+=['--inventory',str(Path(request['inventory']).resolve())]
                         if not self.run_command(arguments):raise ValueError(self.banner_var.get())
                         busy=True
                     else:raise ValueError('Unknown command')

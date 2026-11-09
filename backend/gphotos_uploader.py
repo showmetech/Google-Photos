@@ -632,11 +632,12 @@ def upload(cfg: dict, album_filter: str | None) -> int:
 
 def dispatch() -> int:
     parser = argparse.ArgumentParser(description="Google Photos Uploader")
-    parser.add_argument("command", choices=["scan", "doctor", "upload", "verify-remote", "mark-baseline"])
+    parser.add_argument("command", choices=["scan", "doctor", "upload", "verify-remote", "mark-baseline", "reconcile", "repair-online"])
     parser.add_argument("--album")
     parser.add_argument("--dry-run", action="store_true", help="Simula sempre, independentemente da configuração.")
     parser.add_argument("--live", action="store_true", help="Faz upload real. Sem isso, upload roda em modo teste.")
     parser.add_argument("--note", help="Nota registrada no historico da baseline.")
+    parser.add_argument("--inventory", help="Inventário JSON do histórico; somente comparação, sem alterar recibos.")
     args = parser.parse_args()
     cfg = load_config()
     if args.live and args.dry_run:
@@ -647,6 +648,16 @@ def dispatch() -> int:
         return 0
     if args.command == "doctor":
         return doctor(cfg)
+    if args.command in ("reconcile", "repair-online"):
+        from online_reconciliation import reconcile, repair
+        if args.inventory:
+            from online_reconciliation import import_inventory
+            import_inventory(cfg,args.inventory)
+        if args.command == "repair-online":
+            cfg['dry_run'] = False
+            return repair(cfg, app_root(), globals())
+        summary, _ = reconcile(cfg, app_root(), connect_db)
+        return 0 if summary['albums_complete'] and summary['library_complete'] else 4
     if args.command == "verify-remote":
         return verify_remote(cfg)
     if args.command == "mark-baseline":
