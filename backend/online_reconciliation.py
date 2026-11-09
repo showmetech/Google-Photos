@@ -23,11 +23,12 @@ RECEIPTS = {'rclone_individual_confirmation', 'google_photos_web_upload_confirme
 LABELS = {
     'receipt_and_online': 'Recibo e presença online conferidos',
     'name_match_only': 'Nome correspondente; conteúdo não comprovado',
-    'historical_not_visible': 'Histórico não acessível pela API',
+    'historical_not_visible': 'Álbum não acessível pela API; ausência não comprovada',
     'receipt_not_visible': 'Recibo preservado; confirmação online indisponível',
     'not_verified': 'Ainda sem comprovação online',
     'ambiguous': 'Correspondência ambígua',
     'local_changed': 'Arquivo local modificado; comparar conteúdo',
+    'local_unavailable': 'Arquivo local indisponível; recibo anterior preservado',
     'outside_album': 'Item online fora do álbum esperado',
     'missing_observed_item': 'Item antes conferido não encontrado online',
     'unavailable': 'Consulta online incompleta ou indisponível',
@@ -139,6 +140,11 @@ def key(name):
     return unicodedata.normalize('NFC', name)
 
 
+def local_fingerprint(path):
+    path=Path(path);stat=io_path(path).stat()
+    return hashlib.sha1((str(path)+str(stat.st_size)+str(stat.st_mtime_ns)).encode('utf-8','surrogatepass')).hexdigest()
+
+
 def compare(rows, snapshot, observations):
     directories = defaultdict(list)
     files = defaultdict(list)
@@ -163,9 +169,14 @@ def compare(rows, snapshot, observations):
         observed_id = prior.get('remote_id') if bound else None
         item = candidates[0] if len(candidates) == 1 else None
         result = dict(path=row['path'], album=row['album'], fingerprint=row['fingerprint'],
+                      local_status=row['status'], local_evidence=row.get('evidence_kind') or '',
                       remote_id='', remote_album_id='', state='not_verified', repair=False)
         if not row['size']:
             result['state'] = 'empty_local'
+        elif row.get('local_unavailable'):
+            result['state'] = 'local_unavailable'
+        elif row.get('local_changed'):
+            result['state'] = 'local_changed'
         elif prior and snapshot.get('authority') and prior.get('authority') != snapshot['authority']:
             result['state'] = 'authorization_changed'
         elif not snapshot.get('albums_complete'):
@@ -215,6 +226,10 @@ def reconcile(cfg, app, connect_db, collector=collect):
         names = ('path', 'album', 'size', 'fingerprint', 'status', 'evidence_kind')
         rows = [dict(zip(names, row)) for row in db.execute(
             'select path,album,size,fingerprint,status,evidence_kind from media where present=1 and in_sources(path)')]
+        for row in rows:
+            if row['status']=='uploaded' and row.get('evidence_kind') in RECEIPTS:
+                try:row['local_changed']=local_fingerprint(row['path'])!=row['fingerprint']
+                except OSError:row['local_unavailable']=True
         previous = {r[0]: dict(zip(('fingerprint', 'remote_id', 'remote_album_id', 'authority', 'observed_at','missing_since','missing_checks'), r[1:]))
                     for r in db.execute('select path,fingerprint,remote_id,remote_album_id,authority,observed_at,missing_since,missing_checks from online_observations')}
         if collector is collect:
@@ -252,6 +267,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
                     db.execute('update online_observations set missing_since=0,missing_checks=0 where path=?',(result['path'],))
         counts = dict(Counter(r['state'] for r in results))
         summary = {'schema': 1, 'checked_at': now, 'local_files': len(rows),
+                   'local_pending': sum(row['status']!='uploaded' and row['size']>0 for row in rows),
                    'counts': counts, 'repair_candidates': sum(r['repair'] for r in results),
                    'api_scope': 'app_created_content_only', 'binary_integrity_verified': False,
                    'library_scope': snapshot.get('library_scope','fixture_or_external'),
@@ -273,6 +289,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
         document = ('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
                     '<title>Conferência online — Google Fotos</title><style>body{font:16px Segoe UI,sans-serif;max-width:1100px;margin:32px auto;padding:16px}td,th{padding:10px;border-bottom:1px solid #999;text-align:left}table{border-collapse:collapse;width:100%}</style>'
                     '<h1>Conferência online</h1><p>'+html.escape(datetime.fromtimestamp(now,timezone.utc).isoformat())+'</p>'
+                    '<p><strong>'+str(len(rows))+' arquivos locais · '+str(counts.get('receipt_and_online',0))+' com recibo e presença online conferidos · '+str(summary['repair_candidates'])+' ausências aptas a reparo</strong></p>'
                     '<p>A API só mostra conteúdo criado por este cliente. Histórico não visível não significa ausente. '
                     'Recibo e nome correspondente não equivalem a comparação binária. Esta conferência não apaga nem reenvia o histórico.</p>'
                     '<p>Inventário histórico: '+html.escape(str(summary['historical_snapshot_at'] or 'não importado'))+'. '

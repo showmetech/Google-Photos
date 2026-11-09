@@ -109,7 +109,8 @@ class ComparisonTests(unittest.TestCase):
                 db=sqlite3.connect(cfg['database']);db.create_function('in_sources',1,lambda p:1)
                 db.execute('create table if not exists media(path text primary key,album text,size integer,fingerprint text,status text,evidence_kind text,present integer,uploaded_at text,last_error text)');return db
             db=connect(cfg)
-            db.execute('insert into media values(?,?,?,?,?,?,1,?,null)',(str(photo),'Album',7,'f1','uploaded','rclone_individual_confirmation','2026-01-01'))
+            fp=online.local_fingerprint(photo)
+            db.execute('insert into media values(?,?,?,?,?,?,1,?,null)',(str(photo),'Album',7,fp,'uploaded','rclone_individual_confirmation','2026-01-01'))
             db.execute('insert into media values(?,?,?,?,?,?,1,?,null)',('history.jpg','History',7,'f1','uploaded','online_existing_declared_by_user','2026-01-01'));db.commit();db.close()
             online.reconcile(cfg,root,connect,lambda *args:snapshot())
             db=connect(cfg);db.execute('update online_observations set missing_since=?,missing_checks=1',(time.time()-7200,));db.commit();db.close()
@@ -118,7 +119,7 @@ class ComparisonTests(unittest.TestCase):
                 db=connect(cfg);self.assertEqual(db.execute('select status,uploaded_at from media where path=?',(str(photo),)).fetchone(),('pending',None));db.close();calls.append(True);return 0
             online.reconcile=lambda cfg,app,connector:original(cfg,app,connector,lambda *args:snapshot([]))
             try:
-                self.assertEqual(online.repair(cfg,root,{'connect_db':connect,'fingerprint':lambda *args:'f1','upload':upload}),0)
+                self.assertEqual(online.repair(cfg,root,{'connect_db':connect,'fingerprint':lambda *args:fp,'upload':upload}),0)
             finally:online.reconcile=original
             self.assertEqual(calls,[True]);db=connect(cfg)
             self.assertEqual(db.execute("select status,evidence_kind from media where path='history.jpg'").fetchone(),('uploaded','online_existing_declared_by_user'))
@@ -130,10 +131,17 @@ class ComparisonTests(unittest.TestCase):
                 db=sqlite3.connect(cfg['database']);db.create_function('in_sources',1,lambda p:1)
                 db.execute('create table if not exists media(path text,album text,size integer,fingerprint text,status text,evidence_kind text,present integer)')
                 return db
-            db=connect(cfg);db.execute('insert into media values(?,?,?,?,?,?,1)',tuple(row().values()));db.commit();db.close()
+            photo=root/'a.jpg';photo.write_bytes(b'fixture');local=row(path=str(photo),fingerprint=online.local_fingerprint(photo))
+            db=connect(cfg);db.execute('insert into media values(?,?,?,?,?,?,1)',tuple(local.values()));db.commit();db.close()
             summary,results=online.reconcile(cfg,root,connect,lambda *args:snapshot())
             self.assertEqual(summary['counts'],{'receipt_and_online':1});self.assertFalse(summary['binary_integrity_verified'])
             db=connect(cfg);self.assertEqual(db.execute('select status from media').fetchone()[0],'uploaded');self.assertEqual(db.execute('select remote_id from online_observations').fetchone()[0],'media-id');db.close()
             self.assertTrue((root/'audit/online-reconciliation.html').is_file())
+            photo.write_bytes(b'changed while the saved receipt still exists')
+            summary,_=online.reconcile(cfg,root,connect,lambda *args:snapshot())
+            self.assertEqual(summary['counts'],{'local_changed':1})
+            photo.unlink()
+            summary,_=online.reconcile(cfg,root,connect,lambda *args:snapshot())
+            self.assertEqual(summary['counts'],{'local_unavailable':1})
 
 if __name__=='__main__':unittest.main()
