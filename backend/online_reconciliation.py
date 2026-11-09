@@ -312,7 +312,7 @@ def repair(cfg, app, uploader):
     if not candidates:
         return 0
     db = uploader['connect_db'](cfg)
-    changed = 0
+    changed_paths = []
     try:
         db.execute('create table if not exists online_repair_requests (id integer primary key, created_at real not null, path text not null, prior_json text not null)')
         for item in candidates:
@@ -325,9 +325,10 @@ def repair(cfg, app, uploader):
             previous=db.execute('select status,uploaded_at,evidence_kind,fingerprint from media where path=?',(str(path),)).fetchone()
             if not previous or previous[0]!='uploaded' or previous[2] not in RECEIPTS or previous[3]!=item['fingerprint']:continue
             db.execute('insert into online_repair_requests(created_at,path,prior_json) values(?,?,?)',(time.time(),str(path),json.dumps({'media':previous,'remote_id':item['remote_id'],'remote_album_id':item['remote_album_id']})))
-            changed += db.execute("update media set status='pending',uploaded_at=null,last_error='Item previamente observado ausente na consulta online completa' where path=? and fingerprint=? and status='uploaded'", (str(path),item['fingerprint'])).rowcount
+            if db.execute("update media set status='pending',uploaded_at=null,last_error='Item previamente observado ausente na consulta online completa' where path=? and fingerprint=? and status='uploaded'", (str(path),item['fingerprint'])).rowcount:
+                changed_paths.append(str(path))
         db.commit()
     finally:
         db.close()
     # The CLI worker lock remains held throughout verification and upload.
-    return uploader['upload'](cfg, None) if changed else 0
+    return uploader['upload'](cfg, None, changed_paths) if changed_paths else 0

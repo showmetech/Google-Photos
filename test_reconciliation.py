@@ -116,6 +116,7 @@ class ComparisonTests(unittest.TestCase):
             db=connect(cfg);db.execute('update online_observations set missing_since=?,missing_checks=1',(time.time()-7200,));db.commit();db.close()
             calls=[];original=online.reconcile
             def upload(*args):
+                self.assertEqual(args[2],[str(photo)])
                 db=connect(cfg);self.assertEqual(db.execute('select status,uploaded_at from media where path=?',(str(photo),)).fetchone(),('pending',None));db.close();calls.append(True);return 0
             online.reconcile=lambda cfg,app,connector:original(cfg,app,connector,lambda *args:snapshot([]))
             try:

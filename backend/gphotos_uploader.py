@@ -441,7 +441,7 @@ def mark_baseline(cfg: dict, note: str | None) -> int:
     return 0
 
 
-def upload(cfg: dict, album_filter: str | None) -> int:
+def upload(cfg: dict, album_filter: str | None, allowed_paths=None) -> int:
     stats = scan(cfg)
     write_status(cfg, phase="scan", current_album="", current_file="", current_file_name="", pending_files=stats["pending_files"], last_error="")
     print(f"Inventario: {stats['media_files']} midias, {stats['albums']} albuns, {stats['pending_files']} pendentes.")
@@ -456,6 +456,10 @@ def upload(cfg: dict, album_filter: str | None) -> int:
         albums = [album for album in albums if album not in blocked_albums]
     if album_filter:
         albums = [a for a in albums if a == album_filter]
+    if allowed_paths is not None:
+        allowed_paths=set(allowed_paths)
+        permitted_albums={album for path,album in db.execute("select path,album from media where present=1 and status!='uploaded'") if path in allowed_paths}
+        albums=[album for album in albums if album in permitted_albums]
     if not albums:
         invalid = stats.get("unresolved_invalid_files", stats.get("invalid_files", 0))
         write_status(cfg, phase="error" if invalid else "idle", current_album="", current_file="", current_file_name="", pending_files=stats["pending_files"], last_error=EMPTY_FILE_ERROR if invalid else "")
@@ -486,6 +490,9 @@ def upload(cfg: dict, album_filter: str | None) -> int:
     for index, album in enumerate(albums, start=1):
         album_files = db.execute("select path from media where album = ? and size > 0 and status != 'uploaded' and present=1 and in_sources(path) and path like ? escape '!'", (album, pattern)).fetchall()
         pending_paths = [Path(row[0]) for row in album_files]
+        if allowed_paths is not None:
+            pending_paths=[path for path in pending_paths if str(path) in allowed_paths]
+        if not pending_paths:continue
         write_status(
             cfg,
             phase="upload",
@@ -574,8 +581,8 @@ def upload(cfg: dict, album_filter: str | None) -> int:
         unconfirmed = set(map(str, pending_paths)) - set(copied)
         confirmation_error = "O rclone terminou sem confirmar individualmente todos os arquivos; os itens sem confirmacao continuam pendentes."
         last_error = result.stdout[-1000:] if result.returncode else (confirmation_error if unconfirmed and not dry else None)
-        db.execute("update media set status = 'pending', uploaded_at = null, last_error = ? where album = ? and size > 0 and status != 'uploaded' and present=1 and in_sources(path) and path like ? escape '!'",
-                   (last_error, album, pattern))
+        db.executemany("update media set status='pending',uploaded_at=null,last_error=? where path=? and size>0 and status!='uploaded' and present=1",
+                       [(last_error,str(path)) for path in pending_paths])
         if not dry:
             stable_copied = []
             for path in copied:

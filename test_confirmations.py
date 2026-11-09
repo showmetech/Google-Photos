@@ -46,5 +46,19 @@ with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
     try:module['stage_pending_files']('Album',[album/'a.jpg'],{str(album/'a.jpg'):old})
     except RuntimeError:results['changed_before_staging_is_blocked']=True
     else:raise AssertionError('Changed source accepted')
+    other=pictures/'Other history';other.mkdir();(other/'unrelated.jpg').write_bytes(b'unrelated pending file')
+    repairs=[]
+    def repair_run(cmd,log_file=None,cfg=None,file_lookup=None,on_confirmed=None):
+        chosen=Path(cmd[cmd.index('--files-from-raw')+1]).read_text(encoding='utf-8').splitlines()
+        assert chosen==['a.jpg'],chosen
+        assert set(file_lookup.values())=={str(album/'a.jpg')},file_lookup
+        assert on_confirmed(file_lookup['a.jpg']);repairs.append(chosen)
+        return subprocess.CompletedProcess(cmd,0,'2026/11/09 12:00:00 INFO  : a.jpg: Copied (new)\n','')
+    env['run']=repair_run
+    with contextlib.redirect_stdout(io.StringIO()):assert module['upload'](cfg,None,[str(album/'a.jpg')])==1
+    assert repairs==[['a.jpg']]
+    with contextlib.closing(sqlite3.connect(cfg['database'])) as db:
+        assert db.execute('select status,uploaded_at from media where path=?',(str(other/'unrelated.jpg'),)).fetchone()==('pending',None)
+    results['repair_selection_does_not_upload_unrelated_pending']=True
 print(json.dumps(results,indent=2))
 (Path(__file__).parent/'confirmation-results.json').write_text(json.dumps(results,indent=2),encoding='utf-8')
