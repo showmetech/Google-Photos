@@ -9,6 +9,8 @@ Configurações → Sincronização → menu **Conferência online**:
 
 O serviço do próprio aplicativo faz a conferência após uma rodada de sincronização, no máximo uma vez por dia quando as consultas funcionam, e com intervalo mínimo de uma hora em caso de indisponibilidade. O mesmo bloqueio de worker protege varredura, comparação e upload. Nenhuma automação do Codex é necessária. O reparo de ausências permanece uma ação explícita no menu.
 
+Para evitar reler toda a biblioteca, a conferência lista os álbuns acessíveis e consulta pela API oficial `mediaItems.batchGet` somente IDs previamente observados que deixaram de aparecer. Usa a autorização existente do mesmo cliente; não abre outra sessão nem solicita novas permissões. Erros de acesso e respostas incompletas não são tratados como mídia excluída.
+
 ## Limites reais da API
 
 A Google Photos Library API só permite listar conteúdo criado pelo cliente autenticado. Ela não oferece um inventário irrestrito do acervo antigo nem hashes dos originais. Portanto:

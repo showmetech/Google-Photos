@@ -72,7 +72,25 @@ class ComparisonTests(unittest.TestCase):
             calls.append(cmd)
             return subprocess.CompletedProcess(cmd,1,'partial','error')
         got=online.collect({'rclone_remote':'gphotos'},Path('.'),runner)
-        self.assertFalse(got['albums_complete']);self.assertFalse(got['library_complete']);self.assertEqual(len(calls),2)
+        self.assertFalse(got['albums_complete']);self.assertFalse(got['library_complete']);self.assertEqual(len(calls),1)
+        self.assertFalse(any(':media/all' in part for cmd in calls for part in cmd))
+    def test_first_inventory_uses_album_reads_without_full_library_scan(self):
+        calls=[]
+        def runner(cmd,**kwargs):
+            calls.append(cmd);return subprocess.CompletedProcess(cmd,0,json.dumps(snapshot()['tree']),'')
+        got=online.collect({'rclone_remote':'gphotos'},Path('.'),runner)
+        self.assertTrue(got['library_complete']);self.assertEqual(len(calls),1)
+    def test_official_batch_lookup_not_found_and_denied_are_distinct(self):
+        import io
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);profile=root/'rclone.conf';profile.write_text('[gphotos]\ntoken = '+json.dumps({'access_token':'offline-fixture'})+'\n')
+            cfg={'rclone_remote':'gphotos','rclone_config':str(profile)}
+            def opener(request,**kwargs):
+                self.assertTrue(request.full_url.startswith('https://photoslibrary.googleapis.com/v1/mediaItems:batchGet?'))
+                return io.StringIO(json.dumps({'mediaItemResults':[{'mediaItem':{'id':'present'}},{'status':{'code':5}}]}))
+            self.assertEqual(online.lookup_ids(cfg,root,['present','missing'],opener),[{'ID':'present'}])
+            def denied(*args,**kwargs):return io.StringIO(json.dumps({'mediaItemResults':[{'status':{'code':7}}]}))
+            with self.assertRaises(ValueError):online.lookup_ids(cfg,root,['private'],denied)
     def test_import_rejects_incomplete_claim_and_never_changes_media(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);cfg={'database':str(root/'state.db')};source=root/'input.json'

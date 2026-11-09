@@ -14,6 +14,8 @@ import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from app_config import profile_path, rclone_args
 from reliable_history import atomic_json, atomic_csv, io_path
 
@@ -66,12 +68,34 @@ def authority(cfg, app):
         return ''
 
 
-def collect(cfg, app, runner=subprocess.run):
+def lookup_ids(cfg, app, ids, opener=urlopen):
+    """Official API, same client's existing token. Never persist base URLs."""
+    parser=configparser.ConfigParser(interpolation=None)
+    parser.read(profile_path(cfg,app),encoding='utf-8-sig')
+    token=json.loads(parser[cfg['rclone_remote']].get('token','{}')).get('access_token')
+    if not token:raise ValueError('Existing authorization unavailable')
+    found=[]
+    for start in range(0,len(ids),50):
+        batch=ids[start:start+50]
+        query=urlencode([('mediaItemIds',item) for item in batch])
+        request=Request('https://photoslibrary.googleapis.com/v1/mediaItems:batchGet?'+query,
+                        headers={'Authorization':'Bearer '+token,'Accept':'application/json'})
+        with opener(request,timeout=30) as response:
+            results=json.load(response).get('mediaItemResults')
+        if not isinstance(results,list) or len(results)!=len(batch):raise ValueError('Incomplete ID lookup')
+        for expected,result in zip(batch,results):
+            if not isinstance(result,dict):raise ValueError('Invalid ID lookup')
+            item=result.get('mediaItem',{})
+            if item.get('id')==expected:found.append({'ID':expected})
+            elif result.get('status',{}).get('code')!=5:raise ValueError('ID lookup denied or ambiguous')
+    return found
+
+
+def collect(cfg, app, runner=subprocess.run, expected_ids=()):
     snapshot = {'at': time.time(), 'authority': authority(cfg, app),
                 'albums_complete': False, 'library_complete': False,
                 'tree': [], 'library': [], 'errors': []}
-    for key, remote, recursive in (
-        ('tree', ':album', True), ('library', ':media/all', False)):
+    for key, remote, recursive in (('tree', ':album', True),):
         args = ['lsjson', cfg['rclone_remote']+remote, '--contimeout', '10s',
                 '--timeout', '30s', '--retries', '1', '--low-level-retries', '1',
                 '--log-level', 'ERROR', '--gphotos-include-archived']
@@ -95,6 +119,19 @@ def collect(cfg, app, runner=subprocess.run):
                 snapshot['errors'].append('library: stable IDs unavailable')
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             snapshot['errors'].append(key+': '+type(exc).__name__)
+    # All IDs visible in other albums are already known to be online. Only
+    # missing previously observed IDs need batchGet; never list media/all.
+    snapshot['authority']=authority(cfg,app)
+    snapshot['library']=[{'ID':e['ID']} for e in snapshot['tree'] if not e['IsDir'] and e.get('ID')]
+    visible={e['ID'] for e in snapshot['library']}
+    missing=sorted(set(expected_ids)-visible)
+    snapshot['library_scope']='previously_observed_ids'
+    if snapshot['albums_complete']:
+        try:
+            if missing:snapshot['library']+=lookup_ids(cfg,app,missing)
+            snapshot['library_complete']=True
+        except (OSError,ValueError,KeyError,configparser.Error) as exc:
+            snapshot['errors'].append('ID lookup: '+type(exc).__name__)
     return snapshot
 
 
@@ -180,7 +217,12 @@ def reconcile(cfg, app, connect_db, collector=collect):
             'select path,album,size,fingerprint,status,evidence_kind from media where present=1 and in_sources(path)')]
         previous = {r[0]: dict(zip(('fingerprint', 'remote_id', 'remote_album_id', 'authority', 'observed_at','missing_since','missing_checks'), r[1:]))
                     for r in db.execute('select path,fingerprint,remote_id,remote_album_id,authority,observed_at,missing_since,missing_checks from online_observations')}
-        snapshot = collector(cfg, app)
+        if collector is collect:
+            expected={previous[row['path']]['remote_id'] for row in rows
+                      if row['path'] in previous and previous[row['path']]['fingerprint']==row['fingerprint']
+                      and row['status']=='uploaded' and row.get('evidence_kind') in RECEIPTS}
+            snapshot=collect(cfg,app,expected_ids=expected)
+        else:snapshot=collector(cfg, app)
         results = compare(rows, snapshot, previous)
         historical_path=Path(cfg['database']).parent/'historical-online-inventory.json'
         historical={}
@@ -212,6 +254,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
         summary = {'schema': 1, 'checked_at': now, 'local_files': len(rows),
                    'counts': counts, 'repair_candidates': sum(r['repair'] for r in results),
                    'api_scope': 'app_created_content_only', 'binary_integrity_verified': False,
+                   'library_scope': snapshot.get('library_scope','fixture_or_external'),
                    'albums_complete': snapshot['albums_complete'], 'library_complete': snapshot['library_complete'],
                    'errors': snapshot['errors'], 'report': str(Path(cfg['audit_dir'])/'online-reconciliation.html')}
         summary['historical_inventory_imported']=historical_path.exists()
