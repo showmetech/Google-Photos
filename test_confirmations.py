@@ -8,7 +8,9 @@ def write_fixture(path,data):
     # hosted Windows. Such a file is correctly excluded by the scanner.
     os.utime(path,(1600000000,1600000000))
 with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
-    root=Path(temp);state=root/'state';os.environ['GOOGLE_PHOTOS_HOME']=str(state)
+    # Hosted Windows TEMP may use RUNNER~1 while the inventory resolves it to
+    # runneradmin. Repair requests use the canonical paths recorded in SQLite.
+    root=Path(temp).resolve();state=root/'state';os.environ['GOOGLE_PHOTOS_HOME']=str(state)
     from app_paths import bootstrap
     bootstrap();cfg=json.loads((state/'config.json').read_text(encoding='utf-8'))
     pictures=root/'Pictures';album=pictures/'Album';album.mkdir(parents=True)
