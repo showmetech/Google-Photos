@@ -60,7 +60,11 @@ with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
         assert on_confirmed(file_lookup['a.jpg']);repairs.append(chosen)
         return subprocess.CompletedProcess(cmd,0,'2026/11/09 12:00:00 INFO  : a.jpg: Copied (new)\n','')
     env['run']=repair_run
-    with contextlib.redirect_stdout(io.StringIO()):assert module['upload'](cfg,None,[str(album/'a.jpg')])==1
+    repair_output=io.StringIO()
+    with contextlib.redirect_stdout(repair_output):repair_code=module['upload'](cfg,None,[str(album/'a.jpg')])
+    with contextlib.closing(sqlite3.connect(cfg['database'])) as diagnostic_db:
+        repair_inventory=diagnostic_db.execute('select path,status,present from media').fetchall()
+    assert repair_code==1,(repair_code,repair_output.getvalue(),repairs,repair_inventory)
     assert repairs==[['a.jpg']]
     with contextlib.closing(sqlite3.connect(cfg['database'])) as db:
         assert db.execute('select status,uploaded_at from media where path=?',(str(other/'unrelated.jpg'),)).fetchone()==('pending',None)
