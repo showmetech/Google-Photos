@@ -2,12 +2,17 @@ import contextlib,io,json,os,runpy,sqlite3,subprocess,sys,tempfile
 from pathlib import Path
 stage=Path(__file__).parent/'backend';sys.path.insert(0,str(stage))
 results={}
+def write_fixture(path,data):
+    path.write_bytes(data)
+    # Stable input ages: fresh NTFS mtimes can briefly lead time.time_ns on
+    # hosted Windows. Such a file is correctly excluded by the scanner.
+    os.utime(path,(1600000000,1600000000))
 with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
     root=Path(temp);state=root/'state';os.environ['GOOGLE_PHOTOS_HOME']=str(state)
     from app_paths import bootstrap
     bootstrap();cfg=json.loads((state/'config.json').read_text(encoding='utf-8'))
     pictures=root/'Pictures';album=pictures/'Album';album.mkdir(parents=True)
-    for name in ('a.jpg','b.jpg'):(album/name).write_bytes(b'fixture-'+name.encode())
+    for name in ('a.jpg','b.jpg'):write_fixture(album/name,b'fixture-'+name.encode())
     cfg.update(photos_root=str(pictures),min_file_age_seconds=0,dry_run=False,album_retries=2,rclone_exe='rclone')
     for name in ('database','logs_dir','audit_dir'):cfg[name]=str(state/cfg[name])
     module=runpy.run_path(str(stage/'gphotos_uploader.py'),run_name='retry_test');env=module['upload'].__globals__
@@ -42,11 +47,11 @@ with tempfile.TemporaryDirectory(prefix='photos-retry-') as temp:
     results['partial_retry_only_sends_remaining']=True
     results['confirmation_committed_before_attempt_finishes']=True
     old=module['fingerprint'](album/'a.jpg',(album/'a.jpg').stat())
-    (album/'a.jpg').write_bytes(b'changed after inventory')
+    write_fixture(album/'a.jpg',b'changed after inventory')
     try:module['stage_pending_files']('Album',[album/'a.jpg'],{str(album/'a.jpg'):old})
     except RuntimeError:results['changed_before_staging_is_blocked']=True
     else:raise AssertionError('Changed source accepted')
-    other=pictures/'Other history';other.mkdir();(other/'unrelated.jpg').write_bytes(b'unrelated pending file')
+    other=pictures/'Other history';other.mkdir();write_fixture(other/'unrelated.jpg',b'unrelated pending file')
     repairs=[]
     def repair_run(cmd,log_file=None,cfg=None,file_lookup=None,on_confirmed=None):
         chosen=Path(cmd[cmd.index('--files-from-raw')+1]).read_text(encoding='utf-8').splitlines()
