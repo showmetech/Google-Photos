@@ -160,5 +160,9 @@
   "A API só permite consultar conteúdo criado por este cliente. Histórico não visível não significa ausente. Nomes e contagens não comprovam integridade binária. Só itens anteriormente observados por ID, com recibo local inalterado e ausência confirmada em consulta completa, podem ser reenviados. Outros casos precisam de conferência no Google Fotos.": "The API only exposes app-created content. Invisible historical albums are not missing. Names and counts do not prove binary integrity. Only previously observed stable IDs with unchanged local receipts and confirmed absence in complete reads can be re-uploaded. Other cases need verification in Google Photos.",
   "Personalizada · padrão": "Custom · default",
   "Opacidade do fundo": "Background opacity",
-  "O fundo é 100% opaco por padrão. Textos e controles mantêm a nitidez. Alto contraste usa as cores do Windows.": "The background is 100% opaque by default. Text and controls remain sharp. High contrast uses Windows colors."
+  "O fundo é 100% opaco por padrão. Textos e controles mantêm a nitidez. Alto contraste usa as cores do Windows.": "The background is 100% opaque by default. Text and controls remain sharp. High contrast uses Windows colors.",
+  "Envios": "Uploads",
+  "Seção selecionada": "Selected section",
+  "Abrir seção": "Open section",
+  "Veja os caminhos completos em Configuração → Pastas.": "See full paths in Setup → Folders."
 }

@@ -20,13 +20,24 @@ public partial class MainWindow {
  CheckBox? syncToggle;
  readonly List<Button> settingsOperations=new();
  StackPanel? configurationRoot;
+ readonly List<StackPanel> configurationPages=new();
+ readonly List<Button> configurationTabs=new();
+ int configurationPage;
  StackPanel BuildConfiguration(){
   var section=new StackPanel();configurationRoot=section;var cfg=Read(Path.Combine(Paths.Home,"config.json"));
   var saved=cfg["photos_roots"] as JsonArray;
   foreach(string path in saved?.Select(v=>v?.ToString()??"")??new[]{cfg["photos_root"]?.ToString()??""})if(path.Length>0)chosenSources.Add(path);
   if(chosenSources.Count==0)foreach(string path in KnownFolders.Media())chosenSources.Add(path);
-  var folders=SettingsCard(section,"\uE8B7","Pastas",out var folderHead);
-  var list=new ListBox{ItemsSource=chosenSources,Height=52,HorizontalContentAlignment=HorizontalAlignment.Stretch,FlowDirection=FlowDirection.LeftToRight,Margin=new(0,8,0,8)};
+  var navigation=new System.Windows.Controls.Primitives.UniformGrid{Columns=4,Margin=new(0,0,0,12)};section.Children.Add(navigation);
+  var pages=new StackPanel();section.Children.Add(pages);
+  foreach(var entry in new[]{("Pastas","\uE8B7"),("Conta","\uE77B"),("Sincronização","\uE895"),("Windows","\uE770")}){
+   int index=configurationPages.Count;var page=new StackPanel{Visibility=index==0?Visibility.Visible:Visibility.Collapsed};configurationPages.Add(page);pages.Children.Add(page);
+   var label=new StackPanel{HorizontalAlignment=HorizontalAlignment.Center};label.Children.Add(new TextBlock{Text=entry.Item2,FontFamily=new("Segoe Fluent Icons"),FontSize=18,HorizontalAlignment=HorizontalAlignment.Center,Margin=new(0,0,0,4)});label.Children.Add(new TextBlock{Text=Locale.Text(entry.Item1=="Sincronização"?"Envios":entry.Item1),FontSize=11,HorizontalAlignment=HorizontalAlignment.Center});
+   var tab=new Button{Content=label,MinHeight=52,Padding=new(4),Margin=new(0,0,index==3?0:4,0),ToolTip=Locale.Text(entry.Item1)};AutomationProperties.SetName(tab,Locale.Text(entry.Item1));tab.Click+=(_,_)=>SelectConfigurationPage(index);configurationTabs.Add(tab);navigation.Children.Add(tab);
+  }
+  SelectConfigurationPage(0);
+  var folders=SettingsCard(configurationPages[0],"\uE8B7","Pastas",out var folderHead);
+  var list=new ListBox{ItemsSource=chosenSources,Height=80,HorizontalContentAlignment=HorizontalAlignment.Stretch,FlowDirection=FlowDirection.LeftToRight,Margin=new(0,8,0,8)};
   ScrollViewer.SetHorizontalScrollBarVisibility(list,ScrollBarVisibility.Disabled);AutomationProperties.SetName(list,Locale.Text("Pastas de fotos e vídeos"));
   var factory=new FrameworkElementFactory(typeof(TextBlock));factory.SetBinding(TextBlock.TextProperty,new System.Windows.Data.Binding());factory.SetBinding(TextBlock.ToolTipProperty,new System.Windows.Data.Binding());factory.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);factory.SetValue(TextBlock.FontSizeProperty,12d);list.ItemTemplate=new DataTemplate{VisualTree=factory};folders.Children.Add(list);
   var folderMore=MenuButton("Mais opções de pastas",()=>{
@@ -38,7 +49,7 @@ public partial class MainWindow {
   var add=SettingsAction("\uE710","Adicionar",()=>{var dialog=new OpenFolderDialog{Title=Locale.Text("Escolha uma pasta"),Multiselect=true};if(dialog.ShowDialog(panel)==true)foreach(string folder in dialog.FolderNames)if(!chosenSources.Contains(folder))chosenSources.Add(folder);});
   var save=SettingsAction("\uE74E","Salvar pastas",()=>Send(new{command="configure",folders=chosenSources.ToArray()}));save.ToolTip=Locale.Text("Salvar origens e pausar automático");folders.Children.Add(ActionPair(add,save));
   folders.Children.Add(SettingsCaption("Alterar as pastas pausa o automático."));
-  var account=SettingsCard(section,"\uE77B","Conta",out var accountHead);
+  var account=SettingsCard(configurationPages[1],"\uE77B","Conta",out var accountHead);
   var accountMore=MenuButton("Mais opções da conta",()=>{
    var menu=NewSettingsMenu();importClient=AddMenu(menu,"Importar cliente OAuth do Google…",ImportOAuthClient,!(Read(Path.Combine(Paths.Data,"ui-service-status.json"))["account_configured"]?.GetValue<bool>()??false));
    AddMenu(menu,"Guia oficial de autorização",()=>Process.Start(new ProcessStartInfo("https://developers.google.com/photos/overview/authorization"){UseShellExecute=true}));
@@ -47,7 +58,7 @@ public partial class MainWindow {
   accountInfo.TextWrapping=TextWrapping.Wrap;accountInfo.FontSize=12;accountInfo.Margin=new(0,4,0,8);accountInfo.SetResourceReference(TextBlock.ForegroundProperty,"SecondaryInk");account.Children.Add(accountInfo);
   var connect=SettingsAction("\uE8A7","Conectar",()=>Command("connect"));connect.ToolTip=Locale.Text("Conectar ou reconectar no navegador");connectAccount=connect;settingsOperations.Add(connect);
   var test=SettingsAction("\uE73E","Testar acesso",()=>Command("doctor"));test.ToolTip=Locale.Text("Testar acesso ao Google Fotos");settingsOperations.Add(test);account.Children.Add(ActionPair(connect,test));
-  var syncCard=SettingsCard(section,"\uE895","Sincronização",out var syncHead);
+  var syncCard=SettingsCard(configurationPages[2],"\uE895","Sincronização",out var syncHead);
   var online=MenuButton("Conferência online",()=>{
    var menu=NewSettingsMenu();bool idle=!(Read(Path.Combine(Paths.Data,"ui-service-status.json"))["busy"]?.GetValue<bool>()??false);
    AddMenu(menu,"Comparar pastas com álbuns online",()=>Command("reconcile"),idle);
@@ -64,7 +75,7 @@ public partial class MainWindow {
   var scan=SettingsAction("\uE721","Verificar",()=>Command("scan"));scan.ToolTip=Locale.Text("Verificar arquivos sem enviar");settingsOperations.Add(scan);settingsOperations.Add(save);
   var local=SettingsAction("\uE9D9","Testes locais",TestLocalConfiguration);local.ToolTip=Locale.Text("Testar pastas e monitor local");syncCard.Children.Add(ActionPair(scan,local));
   diagnosticResult.Margin=new(0,6,0,0);diagnosticResult.MaxHeight=36;diagnosticResult.TextTrimming=TextTrimming.CharacterEllipsis;diagnosticResult.SetResourceReference(TextBlock.ForegroundProperty,"SecondaryInk");diagnosticResult.ToolTip=Locale.Text("Abra o resultado pelo botão de detalhes.");syncCard.Children.Add(diagnosticResult);
-  var windows=SettingsCard(section,"\uE770","Windows",out var windowsHead);
+  var windows=SettingsCard(configurationPages[3],"\uE770","Windows",out var windowsHead);
   var startupSettings=SettingsIcon("\uE8A7","Abrir aplicativos de inicialização do Windows",()=>Process.Start(new ProcessStartInfo("ms-settings:startupapps"){UseShellExecute=true}));DockPanel.SetDock(startupSettings,Dock.Right);windowsHead.Children.Insert(0,startupSettings);
   startupToggle=new CheckBox{Content=Locale.Text("Iniciar com o Windows"),Margin=new(0,6,0,4),FontSize=13};
   startupToggle.Click+=(_,_)=>{if(verify)return;try{WindowsStartup.SetEnabled(startupToggle.IsChecked==true);RefreshStartup();}catch(Exception ex){diagnosticResult.Text=ex.Message;RefreshStartup();}};windows.Children.Add(startupToggle);
@@ -78,6 +89,7 @@ public partial class MainWindow {
   });advanced.HorizontalAlignment=HorizontalAlignment.Stretch;advanced.Margin=new(0,0,0,4);section.Children.Add(advanced);
   return section;
  }
+ void SelectConfigurationPage(int index){configurationPage=index;for(int i=0;i<configurationPages.Count;i++){configurationPages[i].Visibility=i==index?Visibility.Visible:Visibility.Collapsed;configurationTabs[i].SetResourceReference(BackgroundProperty,i==index?"Accent":"TileBrush");configurationTabs[i].SetResourceReference(ForegroundProperty,i==index?"AccentInk":"Ink");AutomationProperties.SetHelpText(configurationTabs[i],Locale.Text(i==index?"Seção selecionada":"Abrir seção"));}Touch();}
  static TextBlock SettingsCaption(string value){var text=Text(value,12,false,"SecondaryInk",new(0,4,0,4));return text;}
  StackPanel SettingsCard(StackPanel parent,string glyph,string title,out DockPanel header){
   var body=new StackPanel();header=new DockPanel{LastChildFill=true};var heading=new StackPanel{Orientation=Orientation.Horizontal};heading.Children.Add(new TextBlock{Text=glyph,FontFamily=new("Segoe Fluent Icons"),FontSize=16,VerticalAlignment=VerticalAlignment.Center,Margin=new(0,0,8,0)});heading.Children.Add(Text(title,14,true));header.Children.Add(heading);body.Children.Add(header);
