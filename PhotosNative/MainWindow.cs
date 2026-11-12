@@ -24,7 +24,7 @@ public partial class MainWindow:Window {
  readonly Button expand=new(),pin=new(),minimize=new(),sync=new(),automatic=new();
  readonly TextBlock origin=new(),counts=new(),activity=new(),pendingDetails=new(),serviceInfo=new();
  ScrollViewer? panelScroll;
- Window? panel;Border? panelSurface;ComboBox? themeChoice,materialChoice;CheckBox? animations;
+ Window? panel;Border? panelSurface;ComboBox? themeChoice,materialChoice;Slider? opacitySlider;CheckBox? animations;
  HwndSource? source;NativeTray? tray;WindowRevealAnimation? reveal, panelReveal;
  JsonObject prefs=new();bool exiting,animating;long interaction=Environment.TickCount64;string photoStamp="",appearanceSignature="",lastReceipt="";
  readonly HashSet<string> outstanding=new();DateTime lastServiceAttempt=DateTime.MinValue;
@@ -164,8 +164,15 @@ public partial class MainWindow:Window {
   pendingDetails.TextWrapping=TextWrapping.Wrap;pendingDetails.FontSize=12;sections[1].Children.Add(pendingDetails);sections[1].Children.Add(ActionButton("Abrir auditoria e recibos",()=>OpenLocal(Path.Combine(Paths.Home,"audit"))));
   activity.TextWrapping=TextWrapping.Wrap;activity.FontFamily=new("Consolas");activity.FontSize=11;sections[2].Children.Add(activity);sections[2].Children.Add(ActionButton("Abrir logs",()=>OpenLocal(Path.Combine(Paths.Home,"logs"))));
   sections[3].Children.Add(Text("Tema",14,true));themeChoice=new ComboBox{ItemsSource=new[]{"Usar tema do Windows","Claro","Escuro"}.Select(Locale.Text).ToArray(),SelectedIndex=prefs["theme"]?.GetValue<int>()??0,Margin=new(0,8,0,16)};sections[3].Children.Add(themeChoice);
-  sections[3].Children.Add(Text("Aparência",14,true));materialChoice=new ComboBox{ItemsSource=new[]{"Transparente · padrão","Transparente","Transparência suave","Transparência intensa"}.Select(Locale.Text).ToArray(),SelectedIndex=prefs["material"]?.GetValue<int>()??0,Margin=new(0,8,0,16)};sections[3].Children.Add(materialChoice);
-  sections[3].Children.Add(Text("O fundo é transparente por padrão; textos e controles mantêm a opacidade. Alto contraste usa as cores do Windows.",12,false,"SecondaryInk",new(0,0,0,12)));
+  sections[3].Children.Add(Text("Aparência",14,true));materialChoice=new ComboBox{ItemsSource=new[]{"Personalizada · padrão","Transparente","Transparência suave","Transparência intensa"}.Select(Locale.Text).ToArray(),SelectedIndex=prefs["material"]?.GetValue<int>()??0,Margin=new(0,8,0,16)};sections[3].Children.Add(materialChoice);
+  sections[3].Children.Add(Text("O fundo é 100% opaco por padrão. Textos e controles mantêm a nitidez. Alto contraste usa as cores do Windows.",12,false,"SecondaryInk",new(0,0,0,12)));
+  var opacityLabel=Text("Opacidade do fundo",14,true);sections[3].Children.Add(opacityLabel);
+  var opacityValue=Text("",12,false,"SecondaryInk");sections[3].Children.Add(opacityValue);
+  opacitySlider=new Slider{Minimum=20,Maximum=100,TickFrequency=1,SmallChange=1,LargeChange=10,IsSnapToTickEnabled=true,Value=Math.Clamp(prefs["backgroundOpacity"]?.GetValue<double>()??100,20,100),Margin=new(0,8,0,16)};
+  System.Windows.Automation.AutomationProperties.SetName(opacitySlider,Locale.Text("Opacidade do fundo"));
+  opacityValue.Text=opacitySlider.Value.ToString("0",Locale.Culture)+"%";sections[3].Children.Add(opacitySlider);
+  opacitySlider.ValueChanged+=(_,_)=>{opacityValue.Text=opacitySlider.Value.ToString("0",Locale.Culture)+"%";prefs["backgroundOpacity"]=opacitySlider.Value;appearanceSignature="";ApplyAppearance();};
+  opacitySlider.LostMouseCapture+=(_,_)=>SavePrefs();opacitySlider.PreviewKeyUp+=(_,_)=>SavePrefs();opacitySlider.LostKeyboardFocus+=(_,_)=>SavePrefs();
   animations=new CheckBox{Content=Locale.Text("Animações do Windows"),IsChecked=prefs["animations"]?.GetValue<bool>()??true,Margin=new(0,8,0,16)};sections[3].Children.Add(animations);var above=new CheckBox{Content=Locale.Text("Manter acima de outras janelas"),IsChecked=prefs["alwaysOnTop"]?.GetValue<bool>()??false,Margin=new(0,8,0,16)};above.Click+=(_,_)=>{prefs["alwaysOnTop"]=above.IsChecked==true;SavePrefs();UpdatePin();};sections[3].Children.Add(above);
   sections[3].Children.Add(Text("As configurações expandem acima do widget até o topo da tela, mantendo a mesma largura e uma margem de 12 DIP.",12,false,"SecondaryInk"));
   themeChoice.SelectionChanged+=(_,_)=>SaveAppearance();materialChoice.SelectionChanged+=(_,_)=>SaveAppearance();animations.Click+=(_,_)=>SaveAppearance();
@@ -185,7 +192,8 @@ public partial class MainWindow:Window {
   int selected=prefs["material"]?.GetValue<int>()??0;
   int material=selected==0?0:selected-1;
   material=Math.Clamp(material,0,2);Color accent=contrast?SystemColors.HighlightColor:SystemColors.AccentColor;
-  string signature=$"{Registry.GetValue(key,"SystemUsesLightTheme",1)}/{light}/{transparency}/{contrast}/{material}/{accent}";if(signature==appearanceSignature)return;appearanceSignature=signature;
+  double backgroundOpacity=Math.Clamp(prefs["backgroundOpacity"]?.GetValue<double>()??100,20,100);
+  string signature=$"{Registry.GetValue(key,"SystemUsesLightTheme",1)}/{light}/{transparency}/{contrast}/{material}/{accent}/{backgroundOpacity}";if(signature==appearanceSignature)return;appearanceSignature=signature;
   var resources=Application.Current.Resources;
   var dictionaries=resources.MergedDictionaries;var fluent=new ResourceDictionary{Source=new Uri("pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent."+(light?"Light":"Dark")+".xaml")};if(dictionaries.Count==0)dictionaries.Add(fluent);else dictionaries[0]=fluent;
   resources["Ink"]=contrast?SystemColors.WindowTextBrush:Brush(light?"#1B1B1B":"#F3F3F3");resources["SecondaryInk"]=contrast?SystemColors.WindowTextBrush:Brush(light?"#606060":"#BCBEBE");
@@ -193,7 +201,7 @@ public partial class MainWindow:Window {
   resources["Accent"]=new SolidColorBrush(accent);resources["AccentInk"]=.2126*accent.R+.7152*accent.G+.0722*accent.B>145?Brushes.Black:Brushes.White;
   foreach(var item in new[]{(window:(Window)this,border:surface),(window:panel,border:panelSurface)}){
    if(item.window==null||item.border==null)continue;var hwnd=new WindowInteropHelper(item.window).Handle;if(hwnd==IntPtr.Zero)continue;
-   int dark=light?0:1,corner=2;DwmSetWindowAttribute(hwnd,20,ref dark,4);DwmSetWindowAttribute(hwnd,33,ref corner,4);item.border.Background=NativeMaterial.Apply(item.window,HwndSource.FromHwnd(hwnd),item.window==panel&&selected==0?1:material,light,transparency,contrast);
+   int dark=light?0:1,corner=2;DwmSetWindowAttribute(hwnd,20,ref dark,4);DwmSetWindowAttribute(hwnd,33,ref corner,4);item.border.Background=NativeMaterial.Apply(item.window,HwndSource.FromHwnd(hwnd),item.window==panel&&selected==0?1:material,light,transparency,contrast,backgroundOpacity);
   }
   error.Foreground=contrast?SystemColors.WindowTextBrush:new SolidColorBrush(light?Color.FromRgb(170,40,20):Color.FromRgb(255,188,171));
   bool taskbarLight=(int)(Registry.GetValue(key,"SystemUsesLightTheme",1)??1)!=0;

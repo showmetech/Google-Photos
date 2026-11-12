@@ -13,7 +13,7 @@ internal static class LiveProbe {
    checks["OutsideFocusPolicy"]=SuiteActivation.VerifyFocusPolicy();checks["NativeFocusDismissalAndPin"]=await SuiteActivation.VerifyNativeFocus(window,show);show();await Task.Delay(500);window.UpdateLayout();var hwnd=new WindowInteropHelper(window).Handle;var dpi=VisualTreeHelper.GetDpi(window);
    checks["StandardActionPositions"]=SuiteChrome.Aligned(window);checks["WindowOpened"]=window.IsVisible&&IsWindowVisible(hwnd);checks["TrayRegistered"]=tray();
    checks["StandardWidth"]=Math.Abs(window.ActualWidth-360)<1;checks["StandardHeight"]=Math.Abs(window.ActualHeight-600)<1;
-   checks["TranslucentBackground"]=window.AllowsTransparency&&window.Content is System.Windows.Controls.Border surface&&surface.Background is SolidColorBrush brush&&brush.Color.A<255;checks["DpiValid"]=dpi.DpiScaleX>0&&dpi.DpiScaleY>0;
+   checks["BackgroundBrushAvailable"]=window.AllowsTransparency&&window.Content is System.Windows.Controls.Border surface&&surface.Background is SolidColorBrush brush&&brush.Color.A>=51;checks["DpiValid"]=dpi.DpiScaleX>0&&dpi.DpiScaleY>0;
    settings();for(int i=0;i<50&&!settingsOpen();i++)await Task.Delay(100);await Task.Delay(600);
    checks["SettingsOpened"]=settingsOpen();checks["SettingsGeometry"]=settingsGeometry();
    back();for(int i=0;i<50&&settingsOpen();i++)await Task.Delay(100);checks["SettingsClosed"]=!settingsOpen();
