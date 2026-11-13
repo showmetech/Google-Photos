@@ -17,7 +17,7 @@ public partial class MainWindow:Window {
  readonly bool verify=Environment.GetCommandLineArgs().Contains("--verify");
  readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromSeconds(1)};
  readonly DateTime maintenanceStarted=DateTime.UtcNow;long lastRefreshTick,lastAuditTick;
- readonly Border surface=new(){CornerRadius=new(8),BorderThickness=new(1)};
+ readonly Border surface=new(){CornerRadius=new(12),BorderThickness=new(1)};
  readonly System.Windows.Controls.Image photo=new(){Stretch=Stretch.Uniform,HorizontalAlignment=HorizontalAlignment.Stretch,VerticalAlignment=VerticalAlignment.Stretch};
  readonly TextBlock previewPlaceholder=new(){TextWrapping=TextWrapping.Wrap,TextAlignment=TextAlignment.Center,VerticalAlignment=VerticalAlignment.Center,HorizontalAlignment=HorizontalAlignment.Center,Margin=new(16)};
  readonly TextBlock lastName=new(),lastDate=new(),status=new(),subtitle=new(),pending=new(),checkedAt=new(),error=new();
@@ -146,7 +146,7 @@ public partial class MainWindow:Window {
  static ComboBoxItem SectionItem(string title,string glyph){var row=new StackPanel{Orientation=Orientation.Horizontal};row.Children.Add(new TextBlock{Text=glyph,FontFamily=new("Segoe Fluent Icons"),Margin=new(0,0,8,0)});row.Children.Add(new TextBlock{Text=Locale.Text(title)});var item=new ComboBoxItem{Content=row};System.Windows.Automation.AutomationProperties.SetName(item,Locale.Text(title));return item;}
  void BuildPanel(){
   panel=new Window{Title=Locale.Text("Google Photos Uploader · Configurações"),Width=360,Height=600,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,ShowInTaskbar=verify,FontFamily=FontFamily,FontSize=14,UseLayoutRounding=true};panel.SetResourceReference(ForegroundProperty,"Ink");Locale.Apply(panel);SuiteWindow.Keys(panel,ClosePanel,()=>{});
-  panelSurface=new Border{CornerRadius=new(8),BorderThickness=new(1)};panelSurface.SetResourceReference(Border.BorderBrushProperty,"BorderLine");panel.Content=panelSurface;
+  panelSurface=new Border{CornerRadius=new(12),BorderThickness=new(1)};panelSurface.SetResourceReference(Border.BorderBrushProperty,"BorderLine");panel.Content=panelSurface;
   var grid=new Grid();grid.RowDefinitions.Add(new(){Height=new(64)});grid.RowDefinitions.Add(new(){Height=new(1,GridUnitType.Star)});panelSurface.Child=grid;
   var close=new Button();SetIcon(close,"\uE8BB","Fechar configurações",(_,_)=>ClosePanel());var head=SuiteChrome.Header(Text("Configurações",20,true),close);grid.Children.Add(head);
   panelScroll=new ScrollViewer{VerticalScrollBarVisibility=ScrollBarVisibility.Disabled,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Margin=new(20,0,20,12)};Grid.SetRow(panelScroll,1);grid.Children.Add(panelScroll);
@@ -193,12 +193,13 @@ public partial class MainWindow:Window {
   int selected=prefs["material"]?.GetValue<int>()??0;
   int material=selected==0?0:selected-1;
   material=Math.Clamp(material,0,2);Color accent=contrast?SystemColors.HighlightColor:SystemColors.AccentColor;
+  if(!light&&!contrast){try{var c=new Windows.UI.ViewManagement.UISettings().GetColorValue(Windows.UI.ViewManagement.UIColorType.AccentLight2);accent=Color.FromRgb(c.R,c.G,c.B);}catch(System.Runtime.InteropServices.COMException){}}
   double backgroundOpacity=Math.Clamp(prefs["backgroundOpacity"]?.GetValue<double>()??100,20,100);
   string signature=$"{Registry.GetValue(key,"SystemUsesLightTheme",1)}/{light}/{transparency}/{contrast}/{material}/{accent}/{backgroundOpacity}";if(signature==appearanceSignature)return;appearanceSignature=signature;
   var resources=Application.Current.Resources;
   var dictionaries=resources.MergedDictionaries;var fluent=new ResourceDictionary{Source=new Uri("pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent."+(light?"Light":"Dark")+".xaml")};if(dictionaries.Count==0)dictionaries.Add(fluent);else dictionaries[0]=fluent;
   resources["Ink"]=contrast?SystemColors.WindowTextBrush:Brush(light?"#1B1B1B":"#F3F3F3");resources["SecondaryInk"]=contrast?SystemColors.WindowTextBrush:Brush(light?"#606060":"#BCBEBE");
-  resources["BorderLine"]=contrast?SystemColors.WindowTextBrush:Brush("#20808080");resources["TileBrush"]=contrast?SystemColors.ControlBrush:Brush(light?"#A0FFFFFF":"#18FFFFFF");resources["SurfaceBrush"]=contrast?SystemColors.WindowBrush:Brush(light?"#40FFFFFF":"#0C000000");
+  resources["BorderLine"]=contrast?SystemColors.WindowTextBrush:Brush(light?"#26000000":"#28FFFFFF");resources["TileBrush"]=contrast?SystemColors.ControlBrush:Brush(light?"#70FFFFFF":"#0FFFFFFF");resources["SurfaceBrush"]=contrast?SystemColors.WindowBrush:Brush(light?"#40FFFFFF":"#0C000000");
   resources["Accent"]=new SolidColorBrush(accent);resources["AccentInk"]=.2126*accent.R+.7152*accent.G+.0722*accent.B>145?Brushes.Black:Brushes.White;
   foreach(var item in new[]{(window:(Window)this,border:surface),(window:panel,border:panelSurface)}){
    if(item.window==null||item.border==null)continue;var hwnd=new WindowInteropHelper(item.window).Handle;if(hwnd==IntPtr.Zero)continue;

@@ -93,7 +93,7 @@ public partial class MainWindow {
  static TextBlock SettingsCaption(string value){var text=Text(value,12,false,"SecondaryInk",new(0,4,0,4));return text;}
  StackPanel SettingsCard(StackPanel parent,string glyph,string title,out DockPanel header){
   var body=new StackPanel();header=new DockPanel{LastChildFill=true};var heading=new StackPanel{Orientation=Orientation.Horizontal};heading.Children.Add(new TextBlock{Text=glyph,FontFamily=new("Segoe Fluent Icons"),FontSize=16,VerticalAlignment=VerticalAlignment.Center,Margin=new(0,0,8,0)});heading.Children.Add(Text(title,14,true));header.Children.Add(heading);body.Children.Add(header);
-  var card=new Border{CornerRadius=new(8),Padding=new(12,8,12,10),Margin=new(0,0,0,8),Child=body};card.SetResourceReference(Border.BackgroundProperty,"TileBrush");parent.Children.Add(card);return body;
+  var card=new Border{CornerRadius=new(6),BorderThickness=new(1),Padding=new(12,8,12,10),Margin=new(0,0,0,8),Child=body};card.SetResourceReference(Border.BackgroundProperty,"TileBrush");card.SetResourceReference(Border.BorderBrushProperty,"BorderLine");parent.Children.Add(card);return body;
  }
  Button SettingsAction(string glyph,string title,Action action){
   var content=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center};content.Children.Add(new TextBlock{Text=glyph,FontFamily=new("Segoe Fluent Icons"),FontSize=14,VerticalAlignment=VerticalAlignment.Center,Margin=new(0,0,6,0)});content.Children.Add(new TextBlock{Text=Locale.Text(title),FontSize=12,VerticalAlignment=VerticalAlignment.Center});

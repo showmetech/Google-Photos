@@ -16,10 +16,10 @@ internal sealed class WindowRevealAnimation:IDisposable {
  }
  void Render(object? sender,EventArgs e){
   if(stopped)return;double ms=watch.Elapsed.TotalMilliseconds;MaxFrameGapMs=Math.Max(MaxFrameGapMs,ms-previous);previous=ms;Frames++;
-  double t=Math.Clamp(ms/240,0,1),ease=1-Math.Pow(1-t,3);Apply(opening?ease:1-ease);
+  double t=Math.Clamp(ms/(opening?220:160),0,1),ease=1-Math.Pow(1-t,3);Apply(opening?ease:1-ease);
   if(t>=1){CompositionTarget.Rendering-=Render;stopped=true;activeCount=Math.Max(0,activeCount-1);if(opening)Reset();completed();}
  }
- void Apply(double progress){int h=Math.Max(1,(int)Math.Round(height*progress));if(h==previousHeight)return;previousHeight=h;var region=CreateRoundRectRgn(0,height-h,width+1,height+1,16,16);if(SetWindowRgn(hwnd,region,false)==0)DeleteObject(region);sample?.Invoke(h);}
+ void Apply(double progress){int h=Math.Max(1,(int)Math.Round(height*progress));if(h==previousHeight)return;previousHeight=h;var region=CreateRoundRectRgn(0,height-h,width+1,height+1,24,24);if(SetWindowRgn(hwnd,region,false)==0)DeleteObject(region);sample?.Invoke(h);}
  void Reset()=>SetWindowRgn(hwnd,IntPtr.Zero,true);
  public void Dispose(){CompositionTarget.Rendering-=Render;if(!stopped)activeCount=Math.Max(0,activeCount-1);stopped=true;Reset();}
  [StructLayout(LayoutKind.Sequential)]struct Rect{public int Left,Top,Right,Bottom;}
@@ -28,7 +28,3 @@ internal sealed class WindowRevealAnimation:IDisposable {
  [DllImport("gdi32.dll")]static extern IntPtr CreateRoundRectRgn(int a,int b,int c,int d,int e,int f);
  [DllImport("gdi32.dll")]static extern bool DeleteObject(IntPtr obj);
 }
-
-
-
-
