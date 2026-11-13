@@ -30,6 +30,7 @@ if($Install){
   if(-not (Select-String -LiteralPath (Join-Path $location 'SHA256SUMS.txt') -SimpleMatch "$digest  $($installer.Name)" -Quiet)){throw 'Installer SHA-256 mismatch'}
   $result=Start-Process -FilePath $installer.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/TASKS=startup,desktopicon' -WindowStyle Hidden -Wait -PassThru
   if($result.ExitCode -ne 0){throw "Installer failed: $($result.ExitCode)"}
+  & (Join-Path $PSScriptRoot 'audit-installation.ps1')
   # Open the app's usual launcher; the app owns recovery and synchronization.
   $exe=Join-Path $env:LOCALAPPDATA 'Programs\Google Photos Upload Manager\native\GooglePhotosWidget.exe'
   Start-Process -FilePath $exe -ArgumentList '--minimized' -WindowStyle Hidden
