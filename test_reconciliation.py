@@ -167,4 +167,18 @@ class SourceAbsenceTests(unittest.TestCase):
         self.assertEqual(result['state'],'source_absent_unverified')
         self.assertFalse(result['repair'])
 
+
+class IdenticalSourceTests(unittest.TestCase):
+    def check_pair(self,other):
+        with tempfile.TemporaryDirectory() as temp:
+            a=Path(temp)/'a.jpg';b=Path(temp)/'b.jpg';a.write_bytes(b'photo');b.write_bytes(other)
+            results=[]
+            for path,state,rid in [(a,'not_verified',''),(b,'receipt_and_online','online-id')]:
+                results.append(dict(path=str(path),album='Album',fingerprint=online.local_fingerprint(path),local_status='uploaded',local_evidence='rclone_individual_confirmation',remote_id=rid,remote_album_id='album-id',state=state,repair=False))
+            return online.reconcile_duplicate_sources(results)[0]
+    def test_identical_local_bytes_share_verified_online_id(self):
+        result=self.check_pair(b'photo');self.assertEqual(result['state'],'local_duplicate_of_verified');self.assertEqual(result['remote_id'],'online-id');self.assertFalse(result['repair'])
+    def test_same_size_different_bytes_are_not_verified(self):
+        self.assertEqual(self.check_pair(b'other')['state'],'not_verified')
+
 if __name__=='__main__':unittest.main()

@@ -21,6 +21,7 @@ from reliable_history import atomic_json, atomic_csv, io_path
 
 RECEIPTS = {'rclone_individual_confirmation', 'google_photos_web_upload_confirmed'}
 LABELS = {
+    'local_duplicate_of_verified': 'Duplicata local idêntica a arquivo com recibo e ID online conferidos',
     'source_absent_online_present': 'Origem ausente; ID online localizado; revisar movimentação ou exclusão',
     'source_absent_unverified': 'Origem ausente; presença online não comprovada; nenhuma exclusão autorizada',
     'receipt_and_online': 'Recibo e presença online conferidos',
@@ -223,6 +224,33 @@ def compare_source_absence(rows, snapshot, observations):
     return results
 
 
+def reconcile_duplicate_sources(results):
+    """Google can deduplicate identical bytes while retaining the other filename."""
+    by_folder=defaultdict(list)
+    for result in results:
+        if result['state']=='receipt_and_online':
+            by_folder[(result['album'],str(Path(result['path']).parent))].append(result)
+    def digest(result):
+        path=Path(result['path'])
+        if local_fingerprint(path)!=result['fingerprint']:raise OSError('Source changed')
+        value=hashlib.sha256()
+        with io_path(path).open('rb') as stream:
+            for chunk in iter(lambda:stream.read(1024*1024),b''):value.update(chunk)
+        if local_fingerprint(path)!=result['fingerprint']:raise OSError('Source changed')
+        return value.digest()
+    for result in results:
+        if result['state']!='not_verified' or result['local_evidence'] not in RECEIPTS or result['local_status']!='uploaded':continue
+        try:
+            size=io_path(result['path']).stat().st_size
+            candidates=[r for r in by_folder[(result['album'],str(Path(result['path']).parent))] if io_path(r['path']).stat().st_size==size]
+            if not candidates:continue
+            original=digest(result)
+            match=next((r for r in candidates if digest(r)==original),None)
+            if match:result.update(state='local_duplicate_of_verified',remote_id=match['remote_id'],remote_album_id=match['remote_album_id'],repair=False)
+        except OSError:continue
+    return results
+
+
 def schema(db):
     db.execute('''create table if not exists online_observations (
         path text primary key, fingerprint text not null, remote_id text not null,
@@ -254,7 +282,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
                       and row['status']=='uploaded' and row.get('evidence_kind') in RECEIPTS}
             snapshot=collect(cfg,app,expected_ids=expected)
         else:snapshot=collector(cfg, app)
-        results = compare(rows, snapshot, previous)
+        results = reconcile_duplicate_sources(compare(rows, snapshot, previous))
         results.extend(compare_source_absence(absent_rows,snapshot,previous))
         historical_path=Path(cfg['database']).parent/'historical-online-inventory.json'
         historical={}
@@ -290,6 +318,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
                    'library_scope': snapshot.get('library_scope','fixture_or_external'),
                    'albums_complete': snapshot['albums_complete'], 'library_complete': snapshot['library_complete'],
                    'errors': snapshot['errors'], 'report': str(Path(cfg['audit_dir'])/'online-reconciliation.html')}
+        summary['local_identical_duplicates']=counts.get('local_duplicate_of_verified',0)
         summary['source_absent_tracked']=len(absent_rows)
         summary['deletion_candidates_verified']=0
         summary['historical_inventory_imported']=historical_path.exists()
