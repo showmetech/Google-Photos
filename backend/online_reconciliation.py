@@ -21,6 +21,8 @@ from reliable_history import atomic_json, atomic_csv, io_path
 
 RECEIPTS = {'rclone_individual_confirmation', 'google_photos_web_upload_confirmed'}
 LABELS = {
+    'source_absent_online_present': 'Origem ausente; ID online localizado; revisar movimentação ou exclusão',
+    'source_absent_unverified': 'Origem ausente; presença online não comprovada; nenhuma exclusão autorizada',
     'receipt_and_online': 'Recibo e presença online conferidos',
     'name_match_only': 'Nome correspondente; conteúdo não comprovado',
     'historical_not_visible': 'Álbum não acessível pela API; ausência não comprovada',
@@ -208,6 +210,19 @@ def compare(rows, snapshot, observations):
     return results
 
 
+def compare_source_absence(rows, snapshot, observations):
+    """Read-only tombstones: missing paths never authorize deleting online media."""
+    visible={item.get('ID') for item in snapshot.get('tree',[])+snapshot.get('library',[]) if item.get('ID')}
+    results=[]
+    for row in rows:
+        prior=observations.get(row['path'],{})
+        bound=bool(snapshot.get('authority')) and prior.get('authority')==snapshot['authority'] and prior.get('fingerprint')==row['fingerprint']
+        remote_id=prior.get('remote_id','') if bound else ''
+        found=bool(remote_id and remote_id in visible)
+        results.append(dict(path=row['path'],album=row['album'],fingerprint=row['fingerprint'],local_status=row['status'],local_evidence=row.get('evidence_kind') or '',remote_id=remote_id,remote_album_id=prior.get('remote_album_id','') if bound else '',state='source_absent_online_present' if found else 'source_absent_unverified',repair=False))
+    return results
+
+
 def schema(db):
     db.execute('''create table if not exists online_observations (
         path text primary key, fingerprint text not null, remote_id text not null,
@@ -226,6 +241,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
         names = ('path', 'album', 'size', 'fingerprint', 'status', 'evidence_kind')
         rows = [dict(zip(names, row)) for row in db.execute(
             'select path,album,size,fingerprint,status,evidence_kind from media where present=1 and in_sources(path)')]
+        absent_rows=[dict(zip(names,row)) for row in db.execute('select path,album,size,fingerprint,status,evidence_kind from media where present=0 and in_sources(path)')]
         for row in rows:
             if row['status']=='uploaded' and row.get('evidence_kind') in RECEIPTS:
                 try:row['local_changed']=local_fingerprint(row['path'])!=row['fingerprint']
@@ -233,12 +249,13 @@ def reconcile(cfg, app, connect_db, collector=collect):
         previous = {r[0]: dict(zip(('fingerprint', 'remote_id', 'remote_album_id', 'authority', 'observed_at','missing_since','missing_checks'), r[1:]))
                     for r in db.execute('select path,fingerprint,remote_id,remote_album_id,authority,observed_at,missing_since,missing_checks from online_observations')}
         if collector is collect:
-            expected={previous[row['path']]['remote_id'] for row in rows
+            expected={previous[row['path']]['remote_id'] for row in rows+absent_rows
                       if row['path'] in previous and previous[row['path']]['fingerprint']==row['fingerprint']
                       and row['status']=='uploaded' and row.get('evidence_kind') in RECEIPTS}
             snapshot=collect(cfg,app,expected_ids=expected)
         else:snapshot=collector(cfg, app)
         results = compare(rows, snapshot, previous)
+        results.extend(compare_source_absence(absent_rows,snapshot,previous))
         historical_path=Path(cfg['database']).parent/'historical-online-inventory.json'
         historical={}
         try:
@@ -273,6 +290,8 @@ def reconcile(cfg, app, connect_db, collector=collect):
                    'library_scope': snapshot.get('library_scope','fixture_or_external'),
                    'albums_complete': snapshot['albums_complete'], 'library_complete': snapshot['library_complete'],
                    'errors': snapshot['errors'], 'report': str(Path(cfg['audit_dir'])/'online-reconciliation.html')}
+        summary['source_absent_tracked']=len(absent_rows)
+        summary['deletion_candidates_verified']=0
         summary['historical_inventory_imported']=historical_path.exists()
         summary['historical_snapshot_at']=imported.get('captured_at','não informado') if historical_path.exists() and historical else None
         audit = Path(cfg['audit_dir']);audit.mkdir(parents=True, exist_ok=True)
@@ -294,6 +313,7 @@ def reconcile(cfg, app, connect_db, collector=collect):
                     'Recibo e nome correspondente não equivalem a comparação binária. Esta conferência não apaga nem reenvia o histórico.</p>'
                     '<p>Inventário histórico: '+html.escape(str(summary['historical_snapshot_at'] or 'não importado'))+'. '
                     'Inventários importados são fotografias de uma data, não uma consulta online atual; nunca autorizam reenvios automáticos.</p>'
+                    '<p>Registros ausentes da origem: '+str(len(absent_rows))+'. Ausência local pode ser movimentação, renomeação ou indisponibilidade. Nenhuma exclusão online é executada por este relatório.</p>'
                     '<p><a href="online-reconciliation-files.csv">Resultado por arquivo (CSV)</a></p><table><tr><th>Pasta / álbum</th><th>Evidências</th></tr>'+table+'</table>')
         target = audit/'online-reconciliation.html';temporary=target.with_suffix('.tmp');temporary.write_text(document,encoding='utf-8');temporary.replace(target)
         atomic_json(Path(cfg['database']).parent/'online-reconciliation-summary.json', summary)

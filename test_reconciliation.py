@@ -145,4 +145,26 @@ class ComparisonTests(unittest.TestCase):
             summary,_=online.reconcile(cfg,root,connect,lambda *args:snapshot())
             self.assertEqual(summary['counts'],{'local_unavailable':1})
 
+
+class SourceAbsenceTests(unittest.TestCase):
+    def test_missing_local_with_online_id_never_repairs(self):
+        observed={'a.jpg':{'fingerprint':'f1','authority':'account-1','remote_id':'media-id','remote_album_id':'album-id'}}
+        result=online.compare_source_absence([row()],snapshot(),observed)[0]
+        self.assertEqual(result['state'],'source_absent_online_present')
+        self.assertFalse(result['repair'])
+    def test_missing_local_without_visibility_is_not_deletion(self):
+        result=online.compare_source_absence([row()],snapshot(items=[]),{})[0]
+        self.assertEqual(result['state'],'source_absent_unverified')
+        self.assertFalse(result['repair'])
+    def test_other_account_observation_is_not_reused(self):
+        observed={'a.jpg':{'fingerprint':'f1','authority':'other-account','remote_id':'media-id'}}
+        result=online.compare_source_absence([row()],snapshot(),observed)[0]
+        self.assertEqual(result['state'],'source_absent_unverified')
+        self.assertEqual(result['remote_id'],'')
+    def test_changed_identity_is_not_reused(self):
+        observed={'a.jpg':{'fingerprint':'old','authority':'account-1','remote_id':'media-id'}}
+        result=online.compare_source_absence([row()],snapshot(),observed)[0]
+        self.assertEqual(result['state'],'source_absent_unverified')
+        self.assertFalse(result['repair'])
+
 if __name__=='__main__':unittest.main()
