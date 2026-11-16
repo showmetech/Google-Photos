@@ -153,6 +153,11 @@ def uploadable_pending_count():
     return sum(1 for row in read_pending_media() if row.get("album") not in blocked and int(row.get("size") or 0)>0 and not (row.get("last_error") or "").startswith("Álbum histórico"))
 
 
+def automatic_command(pending, uploadable):
+    """Continue discovering new files without retrying unchanged web-only blocks."""
+    return ["scan"] if pending and uploadable == 0 else ["upload", "--live"]
+
+
 def existing_worker_running():
     """Also recognize workers started by the legacy packaged manager."""
     script = os.path.normcase(str(APP_DIR / "gphotos_uploader.py"))
@@ -465,7 +470,7 @@ class ManagerApp(WidgetUI, tk.Tk):
             self.after(wait_ms, self.auto_monitor_tick)
             return
         self.banner_var.set("Verificacao automatica em andamento...")
-        started = self.run_command(["upload", "--live"])
+        started = self.run_command(automatic_command(read_pending_media(), uploadable_pending_count()))
         if started:
             self.last_auto_run_at = now
         self.next_auto_run_at = now + (self.auto_monitor_interval_ms / 1000)
