@@ -21,6 +21,7 @@ public partial class MainWindow {
     sync.IsEnabled=false;
     checks["Disabled"+theme]=VisualStateManager.GoToState(sync,"Disabled",false);
     OpenPanel(false);await Task.Delay(150);UpdateLayout();panel!.UpdateLayout();
+    checks["SelectorText"+theme]=panel.Tag is ComboBox selector&&selector.SelectedItem is ComboBoxItem entry&&entry.Content is string;
     foreach(var capture in new[]{(window:(Window)this,name:"widget"),(window:panel!,name:"settings")}){
      var dpi=VisualTreeHelper.GetDpi(capture.window);var image=new RenderTargetBitmap((int)(capture.window.ActualWidth*dpi.DpiScaleX),(int)(capture.window.ActualHeight*dpi.DpiScaleY),96*dpi.DpiScaleX,96*dpi.DpiScaleY,PixelFormats.Pbgra32);image.Render(capture.window);
      var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(image));using var stream=File.Create(Path.Combine(Paths.Data,$"fluent-{capture.name}-{theme}.png"));encoder.Save(stream);

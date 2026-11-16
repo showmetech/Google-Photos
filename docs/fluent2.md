@@ -11,10 +11,10 @@ Dark/light resources update with appearance changes. High contrast uses system b
 Button states change immediately; existing app window animations and their preference
 remain unchanged. User opacity, pin, placement and all sync behavior are preserved.
 
-Settings selector content now explicitly uses the semantic foreground so text stays
-legible when switching from dark to light theme.
+Settings selection uses native text content and semantic foreground, avoiding stale
+VisualBrush copies of UIElement labels when switching themes.
 
-Verification: build, isolated `--verify --verify-fluent`, eleven checks for control
+Verification: build, isolated `--verify --verify-fluent`, thirteen checks for control
 corners/states in both themes and the keyboard focus style; widget/settings renders.
 No actual media or account is needed. High contrast was reviewed in code but was not
 enabled globally on the user's computer. NuGet vulnerability retrieval may warn NU1900
