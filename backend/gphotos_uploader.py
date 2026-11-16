@@ -159,6 +159,8 @@ def scan(cfg: dict) -> dict:
         raise SystemExit(str(exc)) from exc
     now = datetime.now().isoformat(timespec="seconds")
     db = connect_db(cfg)
+    discovered = []
+    notify_ready = bool(db.execute("select 1 from events where event_type like '%baseline%' limit 1").fetchone())
     seen = 0
     inserted_or_updated = 0
     albums = {}
@@ -181,6 +183,8 @@ def scan(cfg: dict) -> dict:
         albums[album] = albums.get(album, 0) + 1
         fp = fingerprint(path, stat)
         row = db.execute("select fingerprint, status from media where path = ?", (str(path),)).fetchone()
+        if notify_ready and stat.st_size > 0 and (not row or row[0] != fp) and album not in cfg.get("blocked_albums", []):
+            discovered.append(album)
         status = row[1] if row and row[0] == fp and row[1] == "uploaded" else "pending"
         if stat.st_size == 0:
             status = "invalid"
@@ -202,7 +206,8 @@ def scan(cfg: dict) -> dict:
                 content_sha256=case when media.fingerprint != excluded.fingerprint then null else media.content_sha256 end
         """, (str(path), album, stat.st_size, stat.st_mtime_ns, path.suffix.lower(), fp, status, now, EMPTY_FILE_ERROR if stat.st_size == 0 else None))
         inserted_or_updated += 1
-    db.commit()
+    from new_media_notifications import record_detection
+    record_detection(db, discovered, cfg)
     write_audit_exports(cfg, db)
     pattern = source_pattern(cfg)
     pending = db.execute("select count(*) from media where status != 'uploaded' and size>0 and present=1 and in_sources(path) and path like ? escape '!'", (pattern,)).fetchone()[0]

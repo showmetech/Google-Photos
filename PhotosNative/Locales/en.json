@@ -164,5 +164,7 @@
   "Envios": "Uploads",
   "Seção selecionada": "Selected section",
   "Abrir seção": "Open section",
-  "Veja os caminhos completos em Configuração → Pastas.": "See full paths in Setup → Folders."
+  "Veja os caminhos completos em Configuração → Pastas.": "See full paths in Setup → Folders.",
+  "Novas mídias detectadas": "New media detected",
+  "{0} novas mídias · {1} pasta(s)": "{0} new media files · {1} folder(s)"
 }
