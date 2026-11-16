@@ -63,7 +63,7 @@ def compare(rows, inventory, account, originals=None):
                 result['local'] = local
                 if originals and item['id'] in originals:
                     remote_file = originals[item['id']]
-                    if io_path(remote_file).resolve() == io_path(row['path']).resolve():
+                    if io_path(remote_file).samefile(io_path(row['path'])):
                         raise ValueError('Downloaded original cannot be the local source')
                     downloaded = stable_hash(remote_file)
                     # Recheck local source after both hashes to reject mutations.
@@ -94,8 +94,14 @@ def main():
     if any(Path(args.output).resolve() == Path(p).resolve() for p in inputs):
         parser.error('Output must not overwrite evidence inputs')
     read = lambda p: json.loads(Path(p).read_text(encoding='utf-8-sig'))
-    atomic_json(args.output, compare(read(args.files), read(args.inventory), args.account,
-                                    read(args.originals) if args.originals else None))
+    rows = read(args.files)
+    originals = read(args.originals) if args.originals else None
+    protected = [r['path'] for r in rows] + list((originals or {}).values())
+    output = Path(args.output).resolve()
+    for media in protected:
+        if output == Path(media).resolve() or (output.exists() and output.samefile(io_path(media))):
+            parser.error('Output must not overwrite any original media')
+    atomic_json(args.output, compare(rows, read(args.inventory), args.account, originals))
 
 
 if __name__ == '__main__':

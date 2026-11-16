@@ -33,7 +33,7 @@ jobs:
       - name: Validate portability, history and recovery
         shell: pwsh
         run: |
-          foreach($test in 'test_portability.py','test_confirmations.py','test_migration.py','test_service.py','test_supervisor.py','test_reconciliation.py') {
+          foreach($test in 'test_portability.py','test_confirmations.py','test_migration.py','test_service.py','test_supervisor.py','test_reconciliation.py','test_compare_originals.py','test_automatic_command.py') {
             python $test
             if($LASTEXITCODE -ne 0){throw "Failed: $test"}
           }
