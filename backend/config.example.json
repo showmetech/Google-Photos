@@ -13,9 +13,10 @@
   "allow_create_remote_albums": false,
   "dry_run": true,
   "auto_monitor_enabled": false,
-  "auto_monitor_interval_minutes": 15,
+  "auto_monitor_interval_minutes": 5,
   "min_file_age_seconds": 120,
   "album_retries": 3,
   "blocked_albums": [],
   "upload_root_files": true
 }
+

@@ -150,5 +150,8 @@
   "Pastas e monitor: OK": "Carpetas y monitor: OK",
   "Há itens que precisam de atenção.": "Hay elementos que requieren atención.",
   "Novas mídias detectadas": "Nuevos archivos multimedia detectados",
-  "{0} novas mídias · {1} pasta(s)": "{0} nuevos archivos multimedia · {1} carpeta(s)"
+  "{0} novas mídias · {1} pasta(s)": "{0} nuevos archivos multimedia · {1} carpeta(s)",
+  "Monitor local ativo · verificação a cada {0} minutos": "Monitor local activo · comprobación cada {0} minutos",
+  "Novos arquivos · a cada {0} minutos": "Archivos nuevos · cada {0} minutos"
 }
+

@@ -10,9 +10,11 @@ else:
  identity=json.loads(Path(a.identity).read_text());assert all(identity.get(k) for k in ['name','publisher','publisherDisplayName','productId'])
  assert 'Development' not in identity['publisher']
 stage=root/'staging'/a.architecture
-if stage.exists():shutil.rmtree(stage)
-shutil.copytree(root/'artifacts/shared',stage)
-shutil.copytree(root/f'artifacts/native-{a.architecture}',stage/'native')
+if stage.exists():
+ assert stage.resolve()==root.resolve()/'staging'/a.architecture,'Unexpected staging target'
+ shutil.rmtree(stage)
+shutil.copytree(root/'artifacts/shared',stage,ignore=shutil.ignore_patterns('*.pyc','*.pdb','__pycache__'))
+shutil.copytree(root/f'artifacts/native-{a.architecture}',stage/'native',ignore=shutil.ignore_patterns('*.pdb','*.pyc','__pycache__'))
 assets=stage/'Assets';assets.mkdir()
 with Image.open(root/'PhotosNative/Assets/App.png') as icon:
  for name,size in [('StoreLogo',50),('Square44x44Logo',44),('Square150x150Logo',150)]:icon.resize((size,size),Image.Resampling.LANCZOS).save(assets/(name+'.png'))
@@ -29,12 +31,18 @@ manifest=f'''<?xml version="1.0" encoding="utf-8"?>
  </Application></Applications><Capabilities><rescap:Capability Name="runFullTrust"/></Capabilities>
 </Package>'''
 (stage/'AppxManifest.xml').write_text(manifest,encoding='utf-8')
-for file in stage.rglob('*'):
- if file.is_file() and (file.name in ('config.json','rclone.conf') or file.suffix in ('.sqlite','.db')):raise RuntimeError('Personal state in package: '+str(file))
+from distribution_audit import audit
+vendors=json.loads((root/'artifacts/vendor-files.json').read_text())
+report=audit(stage,vendor_hashes=vendors)
+if not report['passed']:raise RuntimeError(json.dumps(report))
 out=root/'artifacts/packages';out.mkdir(exist_ok=True)
 package=out/f'GooglePhotosUploader-{version}-{a.architecture}{"-development" if a.development else ""}.msix'
 result=subprocess.run([a.makeappx,'pack','/d',str(stage),'/p',str(package),'/o'],stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 (out/(a.architecture+'-makeappx.log')).write_bytes(result.stdout)
 if result.returncode:
  print(result.stdout.decode(errors='replace')[-6000:]);raise SystemExit(result.returncode)
+report=audit(package,vendor_hashes=vendors)
+(out/(a.architecture+'-distribution-audit.json')).write_text(json.dumps(report,indent=2))
+if not report['passed']:raise RuntimeError('Package content audit failed')
 print(package)
+

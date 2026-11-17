@@ -33,7 +33,7 @@ jobs:
       - name: Validate portability, history and recovery
         shell: pwsh
         run: |
-          foreach($test in 'test_portability.py','test_confirmations.py','test_migration.py','test_service.py','test_supervisor.py','test_reconciliation.py','test_compare_originals.py','test_automatic_command.py','test_discovery_notifications.py') {
+          foreach($test in 'test_portability.py','test_confirmations.py','test_migration.py','test_service.py','test_supervisor.py','test_reconciliation.py','test_compare_originals.py','test_automatic_command.py','test_discovery_notifications.py','test_distribution_audit.py','test_general_readiness.py') {
             python $test
             if($LASTEXITCODE -ne 0){throw "Failed: $test"}
           }
@@ -194,3 +194,4 @@ jobs:
           msstore publish packages --inputFile "$($upload.FullName)" -id "$env:PRODUCT"
           if($LASTEXITCODE -ne 0){throw 'Store submission failed'}
           'Submitted for certification. This is not proof that the release is live.' >> $env:GITHUB_STEP_SUMMARY
+

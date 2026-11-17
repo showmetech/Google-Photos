@@ -11,7 +11,7 @@ import webbrowser
 from pathlib import Path
 from tkinter import ttk, filedialog, messagebox
 
-from app_config import load_settings, save_settings, source_folder, rclone_args, account_configured, prepare_account
+from app_config import load_settings, save_settings, source_folder, rclone_args, account_configured, prepare_account, monitor_interval_minutes
 
 import psutil
 from PIL import Image, ImageOps, ImageTk
@@ -197,7 +197,7 @@ class ManagerApp(WidgetUI, tk.Tk):
         self.auto_monitor_enabled = bool(self.cfg.get("auto_monitor_enabled", False))
         self.auth_process = None
         self.settings_dialog = None
-        self.auto_monitor_interval_ms = int(self.cfg.get("auto_monitor_interval_minutes", 15)) * 60 * 1000
+        self.auto_monitor_interval_ms = monitor_interval_minutes(self.cfg) * 60 * 1000
         self.auto_monitor_interval_ms = max(60_000, self.auto_monitor_interval_ms)
         self.source_var = tk.StringVar(value=self.cfg.get("photos_root", ""))
         self.banner_var = tk.StringVar(value="Pronto para verificar uploads.")
@@ -308,11 +308,11 @@ class ManagerApp(WidgetUI, tk.Tk):
         if automatic and not account_configured(cfg, APP_DIR):
             raise ValueError("Conecte sua conta Google antes de ativar o envio automático.")
         cfg["auto_monitor_enabled"] = bool(automatic)
-        cfg["auto_monitor_interval_minutes"] = 15
+        cfg["auto_monitor_interval_minutes"] = monitor_interval_minutes(cfg)
         save_settings(CONFIG_PATH, cfg)
         self.cfg = cfg
         self.auto_monitor_enabled = bool(automatic)
-        self.auto_monitor_interval_ms = 15 * 60_000
+        self.auto_monitor_interval_ms = monitor_interval_minutes(cfg) * 60_000
         self.next_auto_run_at = 0
         self.source_var.set(cfg["photos_root"])
         self.refresh_view()
@@ -654,3 +654,4 @@ if __name__ == "__main__":
     minimized = "--minimized" in sys.argv
     app = ManagerApp(auto_start=auto, minimized=minimized)
     app.mainloop()
+

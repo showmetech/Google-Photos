@@ -47,9 +47,9 @@ brazilianportuguese.OperationActive=Há um envio ou outra operação em andament
 brazilianportuguese.CloseManager=Feche o gerenciador antigo do Google Fotos e tente novamente. As operações existentes foram preservadas.
 brazilianportuguese.MigrationFailed=Não foi possível concluir a migração dos dados. Os dados anteriores foram preservados.
 [Files]
-Source: "artifacts\shared\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "artifacts\native-x64\*"; DestDir: "{app}\native"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
-Source: "artifacts\native-arm64\*"; DestDir: "{app}\native"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsArm64
+Source: "artifacts\shared\*"; DestDir: "{app}"; Excludes: "*.pyc,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "artifacts\native-x64\*"; DestDir: "{app}\native"; Excludes: "*.pyc,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
+Source: "artifacts\native-arm64\*"; DestDir: "{app}\native"; Excludes: "*.pyc,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsArm64
 Source: "backend\maintenance.py"; DestDir: "{tmp}"; DestName: "photos-update-helper.py"; Flags: dontcopy
 [Icons]
 Name: "{group}\Google Photos Uploader"; Filename: "{app}\native\GooglePhotosWidget.exe"
@@ -86,5 +86,6 @@ begin
  if Result then Result := ExitCode = 0;
  if not Result then MsgBox('Close Google Photos Uploader after its current operation completes, then retry. User data is preserved.', mbInformation, MB_OK);
 end;
+
 
 

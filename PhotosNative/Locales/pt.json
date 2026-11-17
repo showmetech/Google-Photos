@@ -157,5 +157,8 @@
   "Opacidade do fundo": "Opacidade do fundo",
   "O fundo é 100% opaco por padrão. Textos e controles mantêm a nitidez. Alto contraste usa as cores do Windows.": "O fundo é 100% opaco por padrão. Textos e controles mantêm a nitidez. Alto contraste usa as cores do Windows.",
   "Novas mídias detectadas": "Novas mídias detectadas",
-  "{0} novas mídias · {1} pasta(s)": "{0} novas mídias · {1} pasta(s)"
+  "{0} novas mídias · {1} pasta(s)": "{0} novas mídias · {1} pasta(s)",
+  "Monitor local ativo · verificação a cada {0} minutos": "Monitor local ativo · verificação a cada {0} minutos",
+  "Novos arquivos · a cada {0} minutos": "Novos arquivos · a cada {0} minutos"
 }
+

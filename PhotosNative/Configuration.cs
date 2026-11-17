@@ -71,7 +71,7 @@ public partial class MainWindow {
   });DockPanel.SetDock(online,Dock.Right);syncHead.Children.Insert(0,online);
   var results=SettingsIcon("\uE9D9","Resultado do último teste",()=>ShowSettingsDetails("Resultado do último teste",diagnosticDetails.Length>0?diagnosticDetails:diagnosticResult.Text.Length>0?diagnosticResult.Text:Locale.Text("Nenhum teste realizado nesta tela.")));DockPanel.SetDock(results,Dock.Right);syncHead.Children.Insert(0,results);
   syncToggle=new CheckBox{Content=Locale.Text("Sincronização automática"),Margin=new(0,6,0,0),FontSize=13};syncToggle.Click+=(_,_)=>Command("automatic",syncToggle.IsChecked==true);syncCard.Children.Add(syncToggle);
-  syncCard.Children.Add(SettingsCaption("Novos arquivos · a cada 15 minutos"));
+  syncCard.Children.Add(SettingsCaption(Locale.Format("Novos arquivos · a cada {0} minutos",Math.Clamp(Read(Path.Combine(Paths.Home,"config.json"))["auto_monitor_interval_minutes"]?.GetValue<int>()??5,1,1440))));
   var scan=SettingsAction("\uE721","Verificar",()=>Command("scan"));scan.ToolTip=Locale.Text("Verificar arquivos sem enviar");settingsOperations.Add(scan);settingsOperations.Add(save);
   var local=SettingsAction("\uE9D9","Testes locais",TestLocalConfiguration);local.ToolTip=Locale.Text("Testar pastas e monitor local");syncCard.Children.Add(ActionPair(scan,local));
   diagnosticResult.Margin=new(0,6,0,0);diagnosticResult.MaxHeight=36;diagnosticResult.TextTrimming=TextTrimming.CharacterEllipsis;diagnosticResult.SetResourceReference(TextBlock.ForegroundProperty,"SecondaryInk");diagnosticResult.ToolTip=Locale.Text("Abra o resultado pelo botão de detalhes.");syncCard.Children.Add(diagnosticResult);
@@ -146,3 +146,4 @@ public partial class MainWindow {
   string target=Path.Combine(dir,id+".json");File.WriteAllText(target+".tmp",JsonSerializer.Serialize(request));File.Move(target+".tmp",target);outstanding.Add(id);Touch();
  }
 }
+

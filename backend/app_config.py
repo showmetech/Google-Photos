@@ -100,3 +100,10 @@ def prepare_account(cfg: dict, app_dir: Path, client_id: str, client_secret: str
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def monitor_interval_minutes(cfg):
+    """Validated per-user setting; toggling automatic mode must preserve it."""
+    try:return max(1,min(1440,int(cfg.get("auto_monitor_interval_minutes",5))))
+    except (TypeError,ValueError,OverflowError):return 5
+

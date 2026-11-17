@@ -170,7 +170,7 @@ class Service(Base):
                 target=self.receipts/path.name
                 atomic_json(target,receipt)
                 path.replace(self.receipts/(path.stem+'.request.json'))
-            state={'pid':os.getpid(),'heartbeat':time.time(),'busy':busy,'banner':self.banner_var.get(),'automatic':self.auto_monitor_enabled,'account_configured':account_configured(self.cfg,root),'folders':self.cfg.get('photos_roots') or [self.cfg.get('photos_root','')],'baseline_recorded':self.baseline_recorded,'operation':self.operation,'last_exit_code':self.last_exit_code,'authenticating':bool(self.auth_process and self.auth_process.poll() is None)}
+            state={'pid':os.getpid(),'heartbeat':time.time(),'busy':busy,'banner':self.banner_var.get(),'automatic':self.auto_monitor_enabled,'account_configured':account_configured(self.cfg,root),'folders':self.cfg.get('photos_roots') or [self.cfg.get('photos_root','')],'baseline_recorded':self.baseline_recorded,'interval_minutes':self.auto_monitor_interval_ms//60000,'operation':self.operation,'last_exit_code':self.last_exit_code,'authenticating':bool(self.auth_process and self.auth_process.poll() is None)}
             target=state_root/'data'/'ui-service-status.json';tmp=target.with_suffix('.tmp')
             tmp.write_text(json.dumps(state,ensure_ascii=False),encoding='utf-8');tmp.replace(target)
             if self.retiring and not busy:self.quit_app();return
@@ -180,3 +180,4 @@ try:
     app=Service(minimized=True)
     app.mainloop()
 except Exception:traceback.print_exc();raise
+

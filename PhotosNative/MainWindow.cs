@@ -133,7 +133,7 @@ public partial class MainWindow:Window {
   var roots=cfg["photos_roots"] as JsonArray;
   origin.Text=roots?.Count>0?string.Join("\n",roots.Select(r=>r?.ToString())):cfg["photos_root"]?.ToString()??Locale.Text("Origem não configurada");
   counts.Text=Locale.Format("{0} mídias pendentes\n{1} originais locais vazios conhecidos",waiting,state["known_local_invalid_files"]?.GetValue<int>()??0)+"\n\n"+Locale.Text(worker["baseline_recorded"]?.GetValue<bool>()==true?"O acervo anterior foi reconhecido por sua declaração. Os recibos confirmados permanecem preservados.":"Não há declaração de acervo anterior. Confira a fila antes de iniciar os envios.");
-  serviceInfo.Text=Locale.Text(serviceAge<15?"Monitor local ativo · verificação a cada 15 minutos":"Monitor local indisponível");
+  int intervalMinutes=Math.Clamp(cfg["auto_monitor_interval_minutes"]?.GetValue<int>()??5,1,1440);serviceInfo.Text=serviceAge<15?Locale.Format("Monitor local ativo · verificação a cada {0} minutos",intervalMinutes):Locale.Text("Monitor local indisponível");
   UpdateConfiguration(cfg,worker);
   System.Windows.Automation.AutomationProperties.SetName(photo,Locale.Text("Último envio confirmado")+": "+lastName.Text);
   if(panel?.IsVisible==true){
@@ -269,3 +269,4 @@ public partial class MainWindow:Window {
  [DllImport("user32.dll")]static extern bool IsWindowVisible(IntPtr h);
  [DllImport("dwmapi.dll")]static extern int DwmSetWindowAttribute(IntPtr hwnd,int attribute,ref int value,int size);
 }
+
