@@ -30,6 +30,9 @@ jobs:
           if (([xml](Get-Content PhotosNative/PhotosNative.csproj)).Project.PropertyGroup.Version -ne $v) { throw 'Release versions differ' }
       - name: Install pinned backend dependencies
         run: python -m pip install -r requirements.txt
+      - name: Validate automatic desktop update gates
+        shell: pwsh
+        run: ./scripts/test-auto-update.ps1
       - name: Validate portability, history and recovery
         shell: pwsh
         run: |

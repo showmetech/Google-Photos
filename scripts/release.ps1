@@ -1,5 +1,8 @@
-param([switch]$Publish,[switch]$Install)
+param([switch]$Publish,[switch]$Install,[switch]$Automatic,[switch]$EnableAutomatic)
 $ErrorActionPreference='Stop'
+if($Automatic -and $Publish){throw 'Automatic checks cannot publish releases'}
+if($EnableAutomatic){& (Join-Path $PSScriptRoot 'enable-auto-update.ps1');return}
+if($Automatic){& (Join-Path $PSScriptRoot 'auto-update.ps1') -Install:$Install;return}
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $release=Get-Content release.json | ConvertFrom-Json
 $version=$release.version
@@ -36,3 +39,5 @@ if($Install){
   Start-Process -FilePath $exe -ArgumentList '--minimized' -WindowStyle Hidden
 }
 @{version=$version;commit=$commit;github='verified';store='submitted; certification and public availability must be checked in Partner Center';desktopInstalled=[bool]$Install} | ConvertTo-Json | Set-Content release-receipt.json
+
+
