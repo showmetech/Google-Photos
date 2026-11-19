@@ -1,5 +1,5 @@
 #ifndef ProductVersion
-#define ProductVersion "2026.11.7.2"
+#error ProductVersion must be supplied from release.json by the release workflow.
 #endif
 [Setup]
 #ifdef TestBuild
