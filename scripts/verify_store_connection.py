@@ -21,7 +21,8 @@ def request_json(url, *, body=None, token=None):
             return json.load(response)
     except urllib.error.HTTPError as exc:
         # The identity endpoint can echo credential-related details in its body.
-        raise RuntimeError(f"Store connection check failed: HTTP {exc.code}") from None
+        stage = "authentication" if body is not None else "product/submission read"
+        raise RuntimeError(f"Store {stage} failed: HTTP {exc.code}") from None
     except (urllib.error.URLError, TimeoutError):
         raise RuntimeError("Store connection check failed: network unavailable") from None
 
@@ -44,6 +45,7 @@ def main():
         "resource": "https://manage.devcenter.microsoft.com",
     })
     token = auth["access_token"]
+    print("Microsoft Entra authentication succeeded; checking Store product access")
     base = f"https://manage.devcenter.microsoft.com/v1.0/my/applications/{product}"
     app = request_json(base, token=token)
     if app.get("id") != product or app.get("packageIdentityName") != expected.get("name"):
@@ -76,4 +78,3 @@ if __name__ == "__main__":
         # Do not dump exception chains or request/response objects.
         print(str(exc) if isinstance(exc, RuntimeError) else "Invalid Store response/configuration", file=sys.stderr)
         sys.exit(1)
-
