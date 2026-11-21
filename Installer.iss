@@ -1,4 +1,4 @@
-#ifndef ProductVersion
+﻿#ifndef ProductVersion
 #error ProductVersion must be supplied from release.json by the release workflow.
 #endif
 [Setup]
@@ -11,7 +11,7 @@ AppId={{7A9317C8-AC8E-4938-9B32-7468D085D617}
 OutputDir=artifacts\packages
 OutputBaseFilename=Google-Photos-Uploader-{#ProductVersion}-Setup
 #endif
-AppName=Google Photos Uploader
+AppName=Showmetech Photo Sync
 AppVersion={#ProductVersion}
 DefaultDirName={localappdata}\Programs\Google Photos Upload Manager
 #ifdef TestBuild

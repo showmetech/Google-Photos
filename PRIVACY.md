@@ -1,8 +1,8 @@
-# Google Photos Uploader — Privacy policy
+# Showmetech Photo Sync — Privacy policy
 
-Effective date: November 18, 2026
+Effective date: November 21, 2026
 
-Google Photos Uploader is an independent Windows application published by Showmetech. It is not an official Google product.
+Showmetech Photo Sync is an independent Windows application published by Showmetech. It is not an official Google product.
 
 ## Data used by the application
 
