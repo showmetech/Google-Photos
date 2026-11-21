@@ -181,6 +181,8 @@ jobs:
           if(Get-ChildItem packages -Filter '*-development.msix'){throw 'Development identity cannot be submitted'}
           if(($env:IDENTITY | ConvertFrom-Json).productId -ne $env:PRODUCT){throw 'Partner Center identity/product mismatch'}
       - uses: microsoft/microsoft-store-apppublisher@v1.1
+        with:
+          version: v0.4.4
       - name: Submit release packages for Microsoft certification
         shell: pwsh
         env:
@@ -194,7 +196,10 @@ jobs:
           if($LASTEXITCODE -ne 0){throw 'Store authentication failed'}
           $upload=Get-ChildItem packages -Filter '*.msixupload'
           if(@($upload).Count -ne 1){throw 'Expected one multi-architecture Store upload'}
-          msstore publish packages --inputFile "$($upload.FullName)" -id "$env:PRODUCT"
+          $storeInput=Join-Path $env:RUNNER_TEMP "photos-store-input"
+          New-Item -ItemType Directory -Path $storeInput -Force | Out-Null
+          Copy-Item -LiteralPath $upload.FullName -Destination $storeInput
+          msstore publish "$storeInput" --inputDirectory "$storeInput" -id "$env:PRODUCT"
           if($LASTEXITCODE -ne 0){throw 'Store submission failed'}
           'Submitted for certification. This is not proof that the release is live.' >> $env:GITHUB_STEP_SUMMARY
 
