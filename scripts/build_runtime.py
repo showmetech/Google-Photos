@@ -14,13 +14,9 @@ for name in ['DLLs','Lib','tcl']:
 if not a.skip_pip:
  subprocess.run([sys.executable,'-m','pip','install','--no-compile','--only-binary=:all:','--platform','win_amd64','--python-version','3.13','--implementation','cp','--abi','cp313','--target',str(runtime/'Lib/site-packages'),'-r',str(root/'requirements.txt')],check=True)
 else:
- # For an already isolated runtime seed only. Select installed dependency names explicitly.
- for name in ('PIL','pillow_heif','psutil','pystray','six.py'):
-  source=seed/'Lib/site-packages'/name
-  if source.is_dir():shutil.copytree(source,runtime/'Lib/site-packages'/name,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__'))
-  else:shutil.copy2(source,runtime/'Lib/site-packages'/name)
- for source in (seed/'Lib/site-packages').glob('*.dist-info'):
-  if source.name.lower().startswith(('pillow','psutil','pystray','six-')):shutil.copytree(source,runtime/'Lib/site-packages'/source.name,dirs_exist_ok=True)
+ # Wheel RECORD includes native extensions and DLLs beside the import package.
+ from runtime_dependencies import copy_pinned_distributions
+ copy_pinned_distributions(seed,runtime/'Lib/site-packages',root/'requirements.txt')
 allowed_backend=['app_config.py','app_paths.py','compare_originals.py','google_photos_upload_manager.pyw','gphotos_uploader.py','launch_manager.pyw','maintenance.py','new_media_notifications.py','online_reconciliation.py','photos_service.pyw','reliable_history.py','ui_supervisor.py','widget_ui.py','config.example.json']
 for name in allowed_backend:shutil.copy2(root/'backend'/name,target/name)
 for old,new in [('App.ico','AppIconYellow.ico'),('App.png','AppIconTray.png')]:shutil.copy2(root/'PhotosNative/Assets'/old,target/new)
@@ -39,7 +35,7 @@ with zipfile.ZipFile(archive) as z:
  for item in z.namelist():
   if Path(item).name in ('rclone.exe','COPYING','README.txt','rclone.1'):
    (dest/Path(item).name).write_bytes(z.read(item))
-subprocess.run([str(runtime/'python.exe'),'-B','-c','import tkinter,PIL,psutil,pillow_heif;print("Clean runtime OK")'],check=True)
+subprocess.run([str(runtime/'python.exe'),'-B',str(root/'scripts/verify_runtime.py')],check=True)
 assert not list(target.rglob('rclone.conf')) and not list(target.rglob('*.sqlite'))
 
 from distribution_audit import audit
