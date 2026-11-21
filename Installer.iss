@@ -1,4 +1,4 @@
-﻿#ifndef ProductVersion
+#ifndef ProductVersion
 #error ProductVersion must be supplied from release.json by the release workflow.
 #endif
 [Setup]
