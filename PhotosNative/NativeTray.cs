@@ -16,11 +16,11 @@ internal sealed class NativeTray:IDisposable {
   this.source=source;this.toggle=toggle;this.context=context;iconPath=iconFile;
   taskbarCreated=RegisterWindowMessage("TaskbarCreated");
   icon=LoadImage(IntPtr.Zero,iconFile,1,GetSystemMetrics(49),GetSystemMetrics(50),0x10);
-  if(icon==IntPtr.Zero)throw new Win32Exception(Marshal.GetLastWin32Error(),Locale.Text("NÃ£o foi possÃ­vel carregar o Ã­cone da bandeja."));
+  if(icon==IntPtr.Zero)throw new Win32Exception(Marshal.GetLastWin32Error(),Locale.Text("Não foi possível carregar o ícone da bandeja."));
   source.AddHook(Hook);try{Add();}catch{source.RemoveHook(Hook);DestroyIcon(icon);throw;}
  }
  Data Create()=>new(){Size=(uint)Marshal.SizeOf<Data>(),Window=source.Handle,Id=1,Flags=1|2|4|0x20|0x80,Message=Callback,Icon=icon,Tip=Branding.ProductName,Guid=id};
- void Add(){var data=Create();if(!Shell_NotifyIcon(0,ref data))throw new Win32Exception(Marshal.GetLastWin32Error(),Locale.Text("NÃ£o foi possÃ­vel adicionar o Ã­cone Ã  bandeja."));data.Version=4;modern=Shell_NotifyIcon(4,ref data);}
+ void Add(){var data=Create();if(!Shell_NotifyIcon(0,ref data))throw new Win32Exception(Marshal.GetLastWin32Error(),Locale.Text("Não foi possível adicionar o ícone à bandeja."));data.Version=4;modern=Shell_NotifyIcon(4,ref data);}
  IntPtr Hook(IntPtr hwnd,int message,IntPtr w,IntPtr l,ref bool handled){
   if((uint)message==taskbarCreated&&!disposed){try{Add();}catch{}return IntPtr.Zero;}
   if(message!=Callback||disposed)return IntPtr.Zero;
