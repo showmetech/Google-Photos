@@ -15,6 +15,8 @@ if stage.exists():
  shutil.rmtree(stage)
 shutil.copytree(root/'artifacts/shared',stage,ignore=shutil.ignore_patterns('*.pyc','*.pdb','__pycache__'))
 shutil.copytree(root/f'artifacts/native-{a.architecture}',stage/'native',ignore=shutil.ignore_patterns('*.pdb','*.pyc','__pycache__'))
+# Validate the actual staging payload, before sealing it into the Store package.
+subprocess.run([str(stage/'runtime/python.exe'),'-B',str(root/'scripts/verify_runtime.py')],check=True)
 assets=stage/'Assets';assets.mkdir()
 with Image.open(root/'PhotosNative/Assets/App.png') as icon:
  for name,size in [('StoreLogo',50),('Square44x44Logo',44),('Square150x150Logo',150)]:icon.resize((size,size),Image.Resampling.LANCZOS).save(assets/(name+'.png'))
