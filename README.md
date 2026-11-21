@@ -1,4 +1,4 @@
-# Showmetech Photo Sync
+# SMT Google Photos Uploader
 
 Windows 11 desktop photo/video upload manager: a compact tray widget, settings panel, local receipts, one background worker and app-owned UI recovery. Independent project; not an official Google product.
 
