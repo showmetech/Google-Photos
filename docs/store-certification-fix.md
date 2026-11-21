@@ -1,6 +1,6 @@
 # Store presentation correction
 
-Version 2026.11.21.1 changes the product display name to Showmetech Photo Sync after the Store review found third-party product naming and screenshot representation issues. The compact header reads Photo Sync. This remains the same product and publisher.
+Version 2026.11.21.2 changes the product display name to Showmetech Photo Sync after the Store review found third-party product naming and screenshot representation issues. The compact header reads Photo Sync. This remains the same product and publisher.
 
 Package identity, executable names, tray GUID, startup registration identity, per-user state directory, OAuth client and upload receipts remain unchanged. These are compatibility identifiers, not branding. No user data is bundled.
 
