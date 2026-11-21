@@ -199,7 +199,7 @@ jobs:
           $storeInput=Join-Path $env:RUNNER_TEMP "photos-store-input"
           New-Item -ItemType Directory -Path $storeInput -Force | Out-Null
           Copy-Item -LiteralPath $upload.FullName -Destination $storeInput
-          msstore publish "$storeInput" --inputDirectory "$storeInput" -id "$env:PRODUCT"
+          msstore publish "$($upload.FullName)" --inputDirectory "$storeInput" -id "$env:PRODUCT"
           if($LASTEXITCODE -ne 0){throw 'Store submission failed'}
           'Submitted for certification. This is not proof that the release is live.' >> $env:GITHUB_STEP_SUMMARY
 
