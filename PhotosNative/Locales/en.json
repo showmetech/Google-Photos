@@ -168,6 +168,9 @@
   "Novas mídias detectadas": "New media detected",
   "{0} novas mídias · {1} pasta(s)": "{0} new media files · {1} folder(s)",
   "Monitor local ativo · verificação a cada {0} minutos": "Local monitor active · checks every {0} minutes",
-  "Novos arquivos · a cada {0} minutos": "New files · every {0} minutes"
+  "Novos arquivos · a cada {0} minutos": "New files · every {0} minutes",
+  "Showmetech Photo Sync · Aplicativo": "Showmetech Photo Sync · Application",
+  "Sair do Showmetech Photo Sync": "Exit Showmetech Photo Sync",
+  "Showmetech Photo Sync · Configurações": "Showmetech Photo Sync · Settings",
+  "Manter acima de outras janelas": "Keep above other windows"
 }
-

@@ -1,10 +1,10 @@
 {
-  "version": "2026.11.17.1",
+  "version": "2026.11.21.2",
   "repository": "showmetech/Google-Photos",
   "python": "3.13.15",
   "rclone": "1.74.3",
   "sdkBuildTools": "10.0.26100.4654",
   "minimumWindows": "10.0.22000.0",
-  "storeConfigured": false
+  "storeConfigured": false,
+  "productName": "Showmetech Photo Sync"
 }
-

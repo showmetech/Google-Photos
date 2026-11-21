@@ -22,12 +22,12 @@ escape=lambda v:xml.escape(v,{'"':'&quot;'})
 manifest=f'''<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" IgnorableNamespaces="uap uap5 rescap">
  <Identity Name="{escape(identity['name'])}" Publisher="{escape(identity['publisher'])}" Version="{store_version}" ProcessorArchitecture="{a.architecture}" />
- <Properties><DisplayName>Google Photos Uploader</DisplayName><PublisherDisplayName>{escape(identity['publisherDisplayName'])}</PublisherDisplayName><Description>Photo and video upload manager</Description><Logo>Assets\\StoreLogo.png</Logo></Properties>
+ <Properties><DisplayName>{escape(cfg["productName"])}</DisplayName><PublisherDisplayName>{escape(identity['publisherDisplayName'])}</PublisherDisplayName><Description>Photo and video upload manager</Description><Logo>Assets\\StoreLogo.png</Logo></Properties>
  <Resources><Resource Language="en-US"/><Resource Language="pt-BR"/><Resource Language="es-ES"/></Resources>
  <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="{cfg['minimumWindows']}" MaxVersionTested="10.0.26100.0"/></Dependencies>
  <Applications><Application Id="GooglePhotosUploader" Executable="native\\GooglePhotosWidget.exe" EntryPoint="Windows.FullTrustApplication">
- <uap:VisualElements DisplayName="Google Photos Uploader" Description="Photo and video upload manager" Square150x150Logo="Assets\\Square150x150Logo.png" Square44x44Logo="Assets\\Square44x44Logo.png" BackgroundColor="transparent"/>
- <Extensions><uap5:Extension Category="windows.startupTask" Executable="native\\GooglePhotosWidget.exe" EntryPoint="Windows.FullTrustApplication"><uap5:StartupTask TaskId="GooglePhotosStartup" Enabled="false" DisplayName="Google Photos Uploader"/></uap5:Extension></Extensions>
+ <uap:VisualElements DisplayName="{escape(cfg["productName"])}" Description="Photo and video upload manager" Square150x150Logo="Assets\\Square150x150Logo.png" Square44x44Logo="Assets\\Square44x44Logo.png" BackgroundColor="transparent"/>
+ <Extensions><uap5:Extension Category="windows.startupTask" Executable="native\\GooglePhotosWidget.exe" EntryPoint="Windows.FullTrustApplication"><uap5:StartupTask TaskId="GooglePhotosStartup" Enabled="false" DisplayName="{escape(cfg["productName"])}"/></uap5:Extension></Extensions>
  </Application></Applications><Capabilities><rescap:Capability Name="runFullTrust"/></Capabilities>
 </Package>'''
 (stage/'AppxManifest.xml').write_text(manifest,encoding='utf-8')
