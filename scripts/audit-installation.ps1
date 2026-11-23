@@ -2,7 +2,7 @@ param([string]$AppPath=(Join-Path $env:LOCALAPPDATA 'Programs\Google Photos Uplo
 $ErrorActionPreference='Stop'
 $app=[IO.Path]::GetFullPath($AppPath)
 $legacyApp=$app
-$store=Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction SilentlyContinue
+$store=Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction Stop
 if($store){
  $app=$store.InstallLocation
  $privateState=Join-Path $env:LOCALAPPDATA ('Packages\'+$store.PackageFamilyName+'\LocalCache\Local\GooglePhotosUploader')

@@ -75,6 +75,9 @@ function Start-PhotosAfterUpdate {
  Start-Process -FilePath (Join-Path $AppPath 'native\GooglePhotosWidget.exe') -ArgumentList '--minimized' -WindowStyle Hidden
 }
 if($LibraryOnly){return}
+# A failed AppX query is uncertainty, not proof that the Store edition is absent.
+# Resolve it before locks, downloads, status files or installation side effects.
+$storePackage=Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction Stop
 $AppPath=[IO.Path]::GetFullPath($AppPath).TrimEnd('\')
 $StatePath=[IO.Path]::GetFullPath($StatePath).TrimEnd('\')
 $script:installed='unknown';$script:available=$null;$cache=$null;$backup=$null;$stopped=$false;$failureExit=0
@@ -82,7 +85,7 @@ $mutex=New-Object Threading.Mutex($false,'Local\Showmetech.GooglePhotos.DesktopU
 if(-not $mutex.WaitOne(0)){$mutex.Dispose();exit 0}
 try {
  # Store editions are updated by the Store, never by the independent EXE installer.
- $storePlan=Get-StoreManagementPlan (Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction SilentlyContinue) @(Get-Process GooglePhotosWidget -ErrorAction SilentlyContinue) $AppPath
+ $storePlan=Get-StoreManagementPlan $storePackage @(Get-Process GooglePhotosWidget -ErrorAction SilentlyContinue) $AppPath
  if($storePlan){$script:installed=$storePlan.InstalledVersion;Write-UpdateStatus $storePlan.Status $storePlan.Detail;return}
  $exe=Join-Path $AppPath 'native\GooglePhotosWidget.exe'
  if(-not(Test-Path -LiteralPath $exe)){throw 'Desktop installation not found'}
