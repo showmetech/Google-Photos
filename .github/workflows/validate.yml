@@ -39,11 +39,11 @@ jobs:
       - name: Validate update handoff and installer policy without installing app
         shell: pwsh
         run: |
-          ./scripts/test-auto-update.ps1
+          pwsh -NoProfile -File ./scripts/test-auto-update.ps1
           if($LASTEXITCODE -ne 0){throw 'Update handoff regression'}
-          ./scripts/test-installation-audit.ps1
+          pwsh -NoProfile -File ./scripts/test-installation-audit.ps1
           if($LASTEXITCODE -ne 0){throw 'Installation audit regression'}
-          ./scripts/test-appx-query-failure.ps1
+          pwsh -NoProfile -File ./scripts/test-appx-query-failure.ps1
           if($LASTEXITCODE -ne 0){throw 'AppX uncertainty caused side effects'}
           choco install innosetup -y --no-progress
           if($LASTEXITCODE -ne 0){throw 'Compiler setup failed'}
