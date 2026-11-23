@@ -40,6 +40,11 @@ jobs:
             python $test
             if($LASTEXITCODE -ne 0){throw "Failed: $test"}
           }
+      - name: Verify Windows startup states without changing registration
+        shell: pwsh
+        run: |
+          dotnet run --project StartupTests/StartupTests.csproj -c Release
+          if($LASTEXITCODE -ne 0){throw 'Startup state regression'}
       - name: Build both Windows architectures
         shell: pwsh
         run: |

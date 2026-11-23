@@ -5,9 +5,18 @@ internal static class WindowsStartup {
  const string Run=@"Software\Microsoft\Windows\CurrentVersion\Run";
  internal const string Name="Google Photos Uploader";
  const string Legacy="GooglePhotosUploadManager";
- internal record State(bool Registered,bool? Disabled,bool Available=true);
+ internal record State(bool Registered,bool? Disabled,bool Available=true,string? Message=null);
+ // Registration, enabled state and policy are separate facts for packaged apps.
+ internal static State FromPackagedState(Windows.ApplicationModel.StartupTaskState state)=>state switch {
+  Windows.ApplicationModel.StartupTaskState.Enabled=>new(true,false),
+  Windows.ApplicationModel.StartupTaskState.EnabledByPolicy=>new(true,false,false,"Ativado pela política do Windows."),
+  Windows.ApplicationModel.StartupTaskState.DisabledByPolicy=>new(true,true,false,"Desativado pela política do Windows."),
+  Windows.ApplicationModel.StartupTaskState.DisabledByUser=>new(true,true,true,"Desativado no Windows. Abra a lista para ativar."),
+  Windows.ApplicationModel.StartupTaskState.Disabled=>new(true,true,true,"Desativado. Ative para iniciar com o Windows."),
+  _=>new(false,null,false)
+ };
  internal static State Read(){try{
-  if(PackageContext.IsPackaged){var task=Windows.ApplicationModel.StartupTask.GetAsync(PackageContext.StartupId).AsTask().GetAwaiter().GetResult();return new(task.State==Windows.ApplicationModel.StartupTaskState.Enabled,task.State==Windows.ApplicationModel.StartupTaskState.DisabledByUser);}
+  if(PackageContext.IsPackaged){var task=Windows.ApplicationModel.StartupTask.GetAsync(PackageContext.StartupId).AsTask().GetAwaiter().GetResult();return FromPackagedState(task.State);}
   using var run=Registry.CurrentUser.OpenSubKey(Run);
   string? entry=run?.GetValue(Name) as string;string name=Name;
   if(string.IsNullOrEmpty(entry)){entry=run?.GetValue(Legacy) as string;name=Legacy;}

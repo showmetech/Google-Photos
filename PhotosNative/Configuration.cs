@@ -130,7 +130,7 @@ public partial class MainWindow {
  }
  void RefreshStartup(){
   if(startupToggle==null)return;var state=WindowsStartup.Read();startupToggle.IsChecked=state.Registered&&state.Disabled!=true;
-  startupToggle.IsEnabled=state.Available;startupInfo.Text=Locale.Text(!state.Available?"Inicialização indisponível por permissão ou política do Windows.":!state.Registered?"Não cadastrado na inicialização.":state.Disabled==true?"Desativado no Windows. Abra a lista para ativar.":"Registrado para iniciar na bandeja.");
+  startupToggle.IsEnabled=state.Available;startupInfo.Text=Locale.Text(state.Message??(!state.Available?"Inicialização indisponível por permissão ou política do Windows.":!state.Registered?"Não cadastrado na inicialização.":state.Disabled==true?"Desativado no Windows. Abra a lista para ativar.":"Registrado para iniciar na bandeja."));
  }
  void TestLocalConfiguration(){
   var cfg=Read(Path.Combine(Paths.Home,"config.json"));var worker=Read(Path.Combine(Paths.Data,"ui-service-status.json"));var results=new List<string>();bool healthy=true;

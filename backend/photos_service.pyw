@@ -15,6 +15,10 @@ if not module['acquire_single_instance']():raise SystemExit(0)
 tk=module['tk']
 Base=module['ManagerApp']
 class Service(Base):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        if self.cfg.get('photos_root') and not account_configured(self.cfg,root):
+            self.banner_var.set('Pastas salvas. Conecte sua conta em Configuração → Conta.')
     def _build_ui(self):
         self.withdraw()
         self.retiring=False
@@ -133,6 +137,8 @@ class Service(Base):
                         cfg['auto_monitor_enabled']=False;cfg['setup_completed']=True
                         save_settings(state_root/'config.json',cfg)
                         self.cfg=cfg;self.auto_monitor_enabled=False;self.source_var.set(cfg['photos_root'])
+                        self.banner_var.set('Pastas salvas. Verifique os arquivos antes de enviar.' if account_configured(cfg,root)
+                                            else 'Pastas salvas. Conecte sua conta em Configuração → Conta.')
                     elif command=='import-client':
                         if busy:raise ValueError('Wait for the current operation.')
                         if account_configured(self.cfg,root):raise ValueError('The existing OAuth client is protected. Use reconnect instead.')
@@ -147,7 +153,10 @@ class Service(Base):
                             import configparser
                             from app_config import profile_path
                             profile=configparser.ConfigParser(interpolation=None);profile.read(profile_path(self.cfg,root),encoding="utf-8-sig")
-                            remote=profile[self.cfg.get("rclone_remote","gphotos")]
+                            remote_name=self.cfg.get("rclone_remote","gphotos")
+                            if not profile.has_section(remote_name) or not profile.get(remote_name,'client_id',fallback='') or not profile.get(remote_name,'client_secret',fallback=''):
+                                raise ValueError('Importe seu cliente OAuth do Google em Configuração → Conta → Mais opções antes de conectar.')
+                            remote=profile[remote_name]
                             self.connect_account(remote.get("client_id",""),remote.get("client_secret",""))
                         busy=self.auth_process is not None and self.auth_process.poll() is None
                         if not busy:raise ValueError(self.banner_var.get())

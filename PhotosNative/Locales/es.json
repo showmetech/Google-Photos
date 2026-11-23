@@ -156,5 +156,11 @@
   "SMT Google Photos Uploader · Aplicativo": "SMT Google Photos Uploader · Aplicación",
   "Sair do SMT Google Photos Uploader": "Salir de SMT Google Photos Uploader",
   "SMT Google Photos Uploader · Configurações": "SMT Google Photos Uploader · Configuración",
-  "Manter acima de outras janelas": "Mantener encima de otras ventanas"
+  "Manter acima de outras janelas": "Mantener encima de otras ventanas",
+  "Ativado pela política do Windows.": "Activado por la política de Windows.",
+  "Desativado pela política do Windows.": "Desactivado por la política de Windows.",
+  "Desativado. Ative para iniciar com o Windows.": "Desactivado. Actívelo para iniciar con Windows.",
+  "Pastas salvas. Conecte sua conta em Configuração → Conta.": "Carpetas guardadas. Conecte su cuenta en Configuración → Cuenta.",
+  "Pastas salvas. Verifique os arquivos antes de enviar.": "Carpetas guardadas. Revise los archivos antes de enviarlos.",
+  "Importe seu cliente OAuth do Google em Configuração → Conta → Mais opções antes de conectar.": "Importe su cliente OAuth de Google en Configuración → Cuenta → Más opciones antes de conectar."
 }

@@ -4,6 +4,9 @@ sys.path.insert(0,str(Path(__file__).parent/'backend'))
 import app_config
 
 class ReadinessTests(unittest.TestCase):
+ def test_portuguese_topmost_label(self):
+  locale=json.loads((Path(__file__).parent/'PhotosNative/Locales/pt.json').read_text(encoding='utf-8-sig'))
+  self.assertEqual(locale['Manter acima de outras janelas'],'Manter acima de outras janelas')
  def test_interval_validation(self):
   self.assertEqual(app_config.monitor_interval_minutes({}),5)
   self.assertEqual(app_config.monitor_interval_minutes({'auto_monitor_interval_minutes':'bad'}),5)
