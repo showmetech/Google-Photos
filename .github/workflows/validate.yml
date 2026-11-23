@@ -50,6 +50,7 @@ jobs:
         shell: pwsh
         run: |
           $qa=Join-Path $env:RUNNER_TEMP ('photos-ui-'+[guid]::NewGuid().ToString('N'))
+          "PHOTOS_QA_DIR=$qa" >> $env:GITHUB_ENV
           New-Item -ItemType Directory (Join-Path $qa 'data') -Force | Out-Null
           '{"photos_roots":[],"auto_monitor_enabled":false}' | Set-Content (Join-Path $qa 'config.json')
           $env:GOOGLE_PHOTOS_HOME=$qa
@@ -59,6 +60,14 @@ jobs:
           $report=Get-Content (Join-Path $qa 'data/native-verification.json') -Raw
           Write-Output $report
           if($process.ExitCode -ne 0 -or -not ($report | ConvertFrom-Json).Passed){throw 'Native UI regression'}
+      - name: Preserve isolated UI reports and screenshots even on failure
+        if: ${{ always() && env.PHOTOS_QA_DIR != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: photos-native-qa-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.PHOTOS_QA_DIR }}/data/
+          retention-days: 7
+          if-no-files-found: warn
       - name: Upload test-only x64 candidate
         uses: actions/upload-artifact@v4
         with:
