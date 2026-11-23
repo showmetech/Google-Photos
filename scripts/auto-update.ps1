@@ -46,7 +46,7 @@ function Test-UploadBusy([string]$StateDirectory) {
 function Get-StoreManagementPlan($Package,$Processes,[string]$LegacyRoot) {
  if(-not $Package){return $null}
  $root=[IO.Path]::GetFullPath($LegacyRoot).TrimEnd('\')+'\'
- $old=@($Processes|Where-Object {$_.Path -and $_.Path.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)})
+ $old=@($Processes|Where-Object {$_.Path -and [IO.Path]::GetFullPath($_.Path).StartsWith($root,[StringComparison]::OrdinalIgnoreCase)})
  [pscustomobject]@{Status=$(if($old.Count){'migration_required'}else{'store_managed'});InstalledVersion=$Package.Version.ToString();Detail=$(if($old.Count){'The Store edition is installed, but the classic widget is still active. Complete migration before claiming this installation is current.'}else{'Updates are managed by Microsoft Store.'})}
 }
 function Write-UpdateStatus([string]$Status,[string]$Detail='') {

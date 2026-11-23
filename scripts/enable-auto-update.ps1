@@ -1,5 +1,6 @@
 param()
 $ErrorActionPreference='Stop'
+if(Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction Stop){throw 'Microsoft Store manages this edition. No independent updater task was registered.'}
 $homePath=Join-Path $env:LOCALAPPDATA 'GooglePhotosUploader'
 $target=Join-Path $homePath 'updater'
 $taskName='Google Photos Uploader - Updates'

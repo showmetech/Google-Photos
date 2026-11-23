@@ -14,6 +14,9 @@ $foreign=[pscustomobject]@{Path=(Join-Path ($root+'-other') 'native\GooglePhotos
 Check ((Get-StoreManagementPlan $store @($foreign) $root).Status -eq 'store_managed') 'foreign installation prefix is not owned'
 Check ((Get-StoreManagementPlan $store @() $root).InstalledVersion -eq '2026.11.2105.0') 'Store managed status includes actual package version'
 Check ($null -eq (Get-StoreManagementPlan $null @($old) $root)) 'classic update remains available without Store package'
+$short='C:\PROGRA~1\PhotosLegacy'
+$shortProcess=[pscustomobject]@{Path=($short+'\native\GooglePhotosWidget.exe')}
+Check ((Get-StoreManagementPlan $store @($shortProcess) $short).Status -eq 'migration_required') 'short paths are normalized on both sides'
 Check ((Get-ReleasePlan $release ([version]'2026.11.17.1')).Version -eq $tag) 'newer stable release'
 Check ($null -eq (Get-ReleasePlan $release ([version]$tag))) 'no reinstall'
 Check ($null -eq (Get-ReleasePlan $release ([version]'2026.12.1.1'))) 'no downgrade'
