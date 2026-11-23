@@ -42,10 +42,14 @@ english.StartupTask=Start with Windows (hidden in the notification area)
 english.OperationActive=An upload or another operation is active. Wait for it to finish, then retry.
 english.CloseManager=Close the previous Google Photos manager, then retry. Existing operations were preserved.
 english.MigrationFailed=User data migration could not be completed. Existing data was preserved.
+english.StoreManaged=This app is already installed through Microsoft Store. Open or update that edition instead of installing a second copy.
+english.StoreCheckFailed=Could not verify the existing Microsoft Store installation. No files were changed. Retry after checking Windows app services.
 brazilianportuguese.StartupTask=Iniciar com o Windows (oculto na bandeja)
 brazilianportuguese.OperationActive=Há um envio ou outra operação em andamento. Aguarde a conclusão e tente novamente.
 brazilianportuguese.CloseManager=Feche o gerenciador antigo do Google Fotos e tente novamente. As operações existentes foram preservadas.
 brazilianportuguese.MigrationFailed=Não foi possível concluir a migração dos dados. Os dados anteriores foram preservados.
+brazilianportuguese.StoreManaged=Este app já está instalado pela Microsoft Store. Abra ou atualize essa edição para evitar uma segunda instalação.
+brazilianportuguese.StoreCheckFailed=Não foi possível verificar a instalação existente da Microsoft Store. Nenhum arquivo foi alterado. Confira os serviços de aplicativos do Windows e tente novamente.
 [Files]
 Source: "artifacts\shared\*"; DestDir: "{app}"; Excludes: "*.pyc,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "artifacts\native-x64\*"; DestDir: "{app}\native"; Excludes: "*.pyc,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
@@ -59,6 +63,21 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 [Run]
 Filename: "{app}\native\GooglePhotosWidget.exe"; Parameters: "--settings"; Flags: nowait postinstall skipifsilent
 [Code]
+function InitializeSetup(): Boolean;
+var ExitCode: Integer;
+begin
+ Result := True;
+#ifndef TestBuild
+ if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), '-NoProfile -NonInteractive -Command "try { if (Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction Stop) {exit 10}; exit 0 } catch {exit 11}"', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then begin
+  SuppressibleMsgBox(CustomMessage('StoreCheckFailed'), mbError, MB_OK, IDOK); Result := False; Exit;
+ end;
+ if ExitCode = 10 then begin
+  SuppressibleMsgBox(CustomMessage('StoreManaged'), mbInformation, MB_OK, IDOK); Result := False;
+ end else if ExitCode <> 0 then begin
+  SuppressibleMsgBox(CustomMessage('StoreCheckFailed'), mbError, MB_OK, IDOK); Result := False;
+ end;
+#endif
+end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var ExitCode: Integer;
 begin

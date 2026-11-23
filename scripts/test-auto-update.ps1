@@ -6,6 +6,14 @@ function Rejected([scriptblock]$Action,$Name){$rejected=$false;try{& $Action|Out
 $sha='a'*40;$tag='2026.11.18.1';$base="https://github.com/showmetech/Google-Photos/releases/download/v$tag/"
 function Fixture { [pscustomobject]@{draft=$false;prerelease=$false;tag_name="v$tag";target_commitish=$sha;assets=@([pscustomobject]@{name="Google-Photos-Uploader-$tag-Setup.exe";browser_download_url=$base+"Google-Photos-Uploader-$tag-Setup.exe"},[pscustomobject]@{name='SHA256SUMS.txt';browser_download_url=$base+'SHA256SUMS.txt'})} }
 $release=Fixture
+$store=[pscustomobject]@{Version=[version]'2026.11.2105.0'}
+$root=Join-Path $env:TEMP 'PhotosLegacy'
+$old=[pscustomobject]@{Path=(Join-Path $root 'native\GooglePhotosWidget.exe')}
+Check ((Get-StoreManagementPlan $store @($old) $root).Status -eq 'migration_required') 'Store presence does not mask active classic installation'
+$foreign=[pscustomobject]@{Path=(Join-Path ($root+'-other') 'native\GooglePhotosWidget.exe')}
+Check ((Get-StoreManagementPlan $store @($foreign) $root).Status -eq 'store_managed') 'foreign installation prefix is not owned'
+Check ((Get-StoreManagementPlan $store @() $root).InstalledVersion -eq '2026.11.2105.0') 'Store managed status includes actual package version'
+Check ($null -eq (Get-StoreManagementPlan $null @($old) $root)) 'classic update remains available without Store package'
 Check ((Get-ReleasePlan $release ([version]'2026.11.17.1')).Version -eq $tag) 'newer stable release'
 Check ($null -eq (Get-ReleasePlan $release ([version]$tag))) 'no reinstall'
 Check ($null -eq (Get-ReleasePlan $release ([version]'2026.12.1.1'))) 'no downgrade'

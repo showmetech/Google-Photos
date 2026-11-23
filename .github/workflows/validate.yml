@@ -36,6 +36,19 @@ jobs:
         run: |
           dotnet run --project StartupTests/StartupTests.csproj -c Release
           if($LASTEXITCODE -ne 0){throw 'Startup state regression'}
+      - name: Validate update handoff and installer policy without installing app
+        shell: pwsh
+        run: |
+          ./scripts/test-auto-update.ps1
+          if($LASTEXITCODE -ne 0){throw 'Update handoff regression'}
+          ./scripts/test-installation-audit.ps1
+          if($LASTEXITCODE -ne 0){throw 'Installation audit regression'}
+          choco install innosetup -y --no-progress
+          if($LASTEXITCODE -ne 0){throw 'Compiler setup failed'}
+          $compiler=Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe" | Select-Object -First 1
+          if(-not $compiler){throw 'Installer compiler unavailable'}
+          python scripts/compile_installer_smoke.py --compiler $compiler.FullName
+          if($LASTEXITCODE -ne 0){throw 'Installer policy compile failed'}
       - name: Build isolated native candidates
         shell: pwsh
         run: |
