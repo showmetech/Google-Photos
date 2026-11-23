@@ -43,6 +43,12 @@ function Test-UploadBusy([string]$StateDirectory) {
  if(Test-Path -LiteralPath $lock){try{$f=[IO.File]::Open($lock,'Open','ReadWrite','None');$f.Dispose()}catch [IO.IOException]{return $true}}
  return $false
 }
+function Get-StoreManagementPlan($Package,$Processes,[string]$LegacyRoot) {
+ if(-not $Package){return $null}
+ $root=[IO.Path]::GetFullPath($LegacyRoot).TrimEnd('\')+'\'
+ $old=@($Processes|Where-Object {$_.Path -and [IO.Path]::GetFullPath($_.Path).StartsWith($root,[StringComparison]::OrdinalIgnoreCase)})
+ [pscustomobject]@{Status=$(if($old.Count){'migration_required'}else{'store_managed'});InstalledVersion=$Package.Version.ToString();Detail=$(if($old.Count){'The Store edition is installed, but the classic widget is still active. Complete migration before claiming this installation is current.'}else{'Updates are managed by Microsoft Store.'})}
+}
 function Write-UpdateStatus([string]$Status,[string]$Detail='') {
  $target=Join-Path $StatePath 'data\desktop-update-status.json'
  New-Item -ItemType Directory (Split-Path $target) -Force|Out-Null
@@ -69,6 +75,9 @@ function Start-PhotosAfterUpdate {
  Start-Process -FilePath (Join-Path $AppPath 'native\GooglePhotosWidget.exe') -ArgumentList '--minimized' -WindowStyle Hidden
 }
 if($LibraryOnly){return}
+# A failed AppX query is uncertainty, not proof that the Store edition is absent.
+# Resolve it before locks, downloads, status files or installation side effects.
+$storePackage=Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction Stop
 $AppPath=[IO.Path]::GetFullPath($AppPath).TrimEnd('\')
 $StatePath=[IO.Path]::GetFullPath($StatePath).TrimEnd('\')
 $script:installed='unknown';$script:available=$null;$cache=$null;$backup=$null;$stopped=$false;$failureExit=0
@@ -76,7 +85,8 @@ $mutex=New-Object Threading.Mutex($false,'Local\Showmetech.GooglePhotos.DesktopU
 if(-not $mutex.WaitOne(0)){$mutex.Dispose();exit 0}
 try {
  # Store editions are updated by the Store, never by the independent EXE installer.
- if(Get-AppxPackage -Name Showmetech.GooglePhotosUploader -ErrorAction SilentlyContinue){Write-UpdateStatus 'store_managed';return}
+ $storePlan=Get-StoreManagementPlan $storePackage @(Get-Process GooglePhotosWidget -ErrorAction SilentlyContinue) $AppPath
+ if($storePlan){$script:installed=$storePlan.InstalledVersion;Write-UpdateStatus $storePlan.Status $storePlan.Detail;return}
  $exe=Join-Path $AppPath 'native\GooglePhotosWidget.exe'
  if(-not(Test-Path -LiteralPath $exe)){throw 'Desktop installation not found'}
  $script:installed=(Get-Item -LiteralPath $exe).VersionInfo.FileVersion

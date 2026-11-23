@@ -29,7 +29,14 @@ with tempfile.TemporaryDirectory(prefix='photos-service-') as temp:
             return receipt
         folder=Path(temp)/'Pictures';folder.mkdir();(folder/'fixture.jpg').write_bytes(b'not a real upload')
         assert read(request('configure',folders=[str(folder)]))['ok']
+        wait(lambda:read(status_path).get('folders')==[str(folder)])
         assert not read(status_path)['automatic']
+        assert read(status_path)['banner']=='Pastas salvas. Conecte sua conta em Configuração → Conta.'
+        results['saved_source_shows_remaining_account_step']=True
+        missing_client=read(request('connect'))
+        assert not missing_client['ok'] and 'Importe seu cliente OAuth' in missing_client['error']
+        assert not read(status_path)['authenticating']
+        results['missing_client_has_actionable_error_without_launching_login']=True
         receipt=request('scan');wait(lambda:read(receipt).get('completed'))
         assert read(receipt)['exit_code']==0
         results['setup_and_scan_completion_receipt']=True
@@ -39,6 +46,12 @@ with tempfile.TemporaryDirectory(prefix='photos-service-') as temp:
         results['baseline_requires_explicit_confirmation']=True
         request('shutdown');process.wait(timeout=10)
         results['graceful_shutdown']=process.returncode==0
+        process=subprocess.Popen([str(python),str(stage/'photos_service.pyw')],env=env,creationflags=subprocess.CREATE_NO_WINDOW)
+        wait(lambda:read(status_path).get('pid')==process.pid)
+        assert read(status_path)['banner']=='Pastas salvas. Conecte sua conta em Configuração → Conta.'
+        assert not read(status_path)['automatic'] and not read(status_path)['account_configured']
+        results['remaining_setup_step_persists_after_restart']=True
+        request('shutdown');process.wait(timeout=10)
     finally:
         if process.poll() is None:process.terminate();process.wait(timeout=10)
 assert all(results.values()),results
