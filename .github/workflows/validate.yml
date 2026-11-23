@@ -46,6 +46,19 @@ jobs:
           $head=git rev-parse HEAD
           @{commit=$head;purpose='Isolated --verify --inspect only; not an installer or a release';startupEnabled=$false;uploadsAllowed=$false} | ConvertTo-Json | Set-Content artifacts/native-x64/candidate.json
           Get-ChildItem artifacts/native-x64 -File -Recurse | ForEach-Object { $hash=Get-FileHash $_.FullName; "$($hash.Hash.ToLower())  $($_.FullName.Substring((Resolve-Path artifacts/native-x64).Path.Length+1))" } | Set-Content artifacts/native-x64/SHA256SUMS.txt
+      - name: Verify isolated native layout and appearance keyboard focus
+        shell: pwsh
+        run: |
+          $qa=Join-Path $env:RUNNER_TEMP ('photos-ui-'+[guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory (Join-Path $qa 'data') -Force | Out-Null
+          '{"photos_roots":[],"auto_monitor_enabled":false}' | Set-Content (Join-Path $qa 'config.json')
+          $env:GOOGLE_PHOTOS_HOME=$qa
+          $exe=(Resolve-Path artifacts/native-x64/GooglePhotosWidget.exe).Path
+          $process=Start-Process -FilePath $exe -ArgumentList '--verify' -PassThru
+          if(-not $process.WaitForExit(60000)){throw 'Isolated native verification timed out'}
+          $report=Get-Content (Join-Path $qa 'data/native-verification.json') -Raw
+          Write-Output $report
+          if($process.ExitCode -ne 0 -or -not ($report | ConvertFrom-Json).Passed){throw 'Native UI regression'}
       - name: Upload test-only x64 candidate
         uses: actions/upload-artifact@v4
         with:
