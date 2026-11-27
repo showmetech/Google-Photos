@@ -160,7 +160,10 @@
   "Ativado pela política do Windows.": "Activado por la política de Windows.",
   "Desativado pela política do Windows.": "Desactivado por la política de Windows.",
   "Desativado. Ative para iniciar com o Windows.": "Desactivado. Actívelo para iniciar con Windows.",
-  "Pastas salvas. Conecte sua conta em Configuração → Conta.": "Carpetas guardadas. Conecte su cuenta en Configuración → Cuenta.",
+  "Pastas salvas. Conecte sua conta em Configuração → Conta.": "Carpetas guardadas. Conecte su cuenta en Cuenta.",
   "Pastas salvas. Verifique os arquivos antes de enviar.": "Carpetas guardadas. Revise los archivos antes de enviarlos.",
-  "Importe seu cliente OAuth do Google em Configuração → Conta → Mais opções antes de conectar.": "Importe su cliente OAuth de Google en Configuración → Cuenta → Más opciones antes de conectar."
+  "Importe seu cliente OAuth do Google em Configuração → Conta → Mais opções antes de conectar.": "Importe su cliente OAuth de Google en Cuenta → Más opciones antes de conectar.",
+  "Ver detalhes": "Ver detalles",
+  "Veja os caminhos completos na seção Pastas.": "Consulte las rutas completas en Carpetas.",
+  "Pastas salvas. O automático está pausado.": "Carpetas guardadas. La carga automática está pausada."
 }

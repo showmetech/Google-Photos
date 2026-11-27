@@ -7,7 +7,8 @@ using Windows.UI.ViewManagement;
 namespace PhotosNative;
 public partial class MainWindow {
  UISettings? accessibilitySettings;
- readonly Dictionary<DependencyObject,double> baseTextSizes=new();
+ sealed record BaseTextSize(double Value);
+ readonly System.Runtime.CompilerServices.ConditionalWeakTable<DependencyObject,BaseTextSize> baseTextSizes=new();
  double textScale=1;
  string announced="";
  void InitializeAccessibility(){
@@ -23,15 +24,18 @@ public partial class MainWindow {
  void ApplyTextScaleFactor(double scale){
   textScale=Math.Clamp(scale,1,2.25);ApplyTextScale(this);if(panel!=null)ApplyTextScale(panel);
   foreach(var border in new[]{surface,panelSurface})if(border?.Child is Grid grid){double height=SuiteChrome.HeaderHeight*textScale;grid.RowDefinitions[0].Height=new GridLength(height);if(grid.Children.Count>0&&grid.Children[0] is FrameworkElement header)header.Height=height;}
+  AdaptContent();
  }
- void ApplyTextScale(DependencyObject element){
+ void ApplyTextScale(DependencyObject element,HashSet<DependencyObject>? visited=null){
+  visited??=new();if(!visited.Add(element))return;
   var property=element is TextBlock?TextBlock.FontSizeProperty:element is Control?Control.FontSizeProperty:null;
   if(element is TextBlock glyph && glyph.FontFamily.Source.Contains("Segoe Fluent Icons"))property=null;
-  if(property!=null&&element.ReadLocalValue(property)!=DependencyProperty.UnsetValue){
-   if(!baseTextSizes.TryGetValue(element,out double original)){original=(double)element.GetValue(property);baseTextSizes[element]=original;}
+  if(property!=null&&(element.ReadLocalValue(property)!=DependencyProperty.UnsetValue||DependencyPropertyHelper.GetValueSource(element,property).BaseValueSource==BaseValueSource.ParentTemplate)){
+   double original=baseTextSizes.GetValue(element,key=>new BaseTextSize((double)key.GetValue(property))).Value;
    element.SetValue(property,original*textScale);
   }
-  foreach(var child in LogicalTreeHelper.GetChildren(element))if(child is DependencyObject dependency)ApplyTextScale(dependency);
+  foreach(var child in LogicalTreeHelper.GetChildren(element))if(child is DependencyObject dependency)ApplyTextScale(dependency,visited);
+  if(element is Visual or System.Windows.Media.Media3D.Visual3D)for(int i=0;i<VisualTreeHelper.GetChildrenCount(element);i++)ApplyTextScale(VisualTreeHelper.GetChild(element,i),visited);
  }
  void AnnounceStatus(){
   if(announced==status.Text)return;announced=status.Text;

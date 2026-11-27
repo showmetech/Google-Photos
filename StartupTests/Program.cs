@@ -23,6 +23,9 @@ foreach(var (top,bottom,widget,scale,overlay) in new[]{(0,720,400,1d,true),(0,21
  if(!overlay&&System.Math.Abs(widget-frame.Top-frame.Height-12*scale)>1)throw new Exception("Incorrect stacked gap");
 }
 Console.WriteLine("PASS: short display overlay and stacked settings at 150/200 percent scale.");
+foreach(byte r in new byte[]{0,32,128,200,255})foreach(byte g in new byte[]{0,32,128,200,255})foreach(byte b in new byte[]{0,32,128,200,255})
+ if(FluentContrast.BestRatio(r,g,b)<4.5)throw new Exception("Accent text below WCAG AA");
+Console.WriteLine("PASS: accent foreground WCAG AA for 125 palette samples.");
 namespace PhotosNative {
  internal static class PackageContext { internal static bool IsPackaged=>false; internal const string StartupId="not-used"; }
  internal static class Paths { internal static string Root=>Path.GetTempPath(); }
