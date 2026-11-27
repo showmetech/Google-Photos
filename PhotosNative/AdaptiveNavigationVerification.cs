@@ -4,8 +4,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Windows.Media;
 namespace PhotosNative;
 public partial class MainWindow {
+ static IEnumerable<TextBlock> VisualText(DependencyObject root){
+  if(root is TextBlock text)yield return text;
+  for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++)foreach(var child in VisualText(VisualTreeHelper.GetChild(root,i)))yield return child;
+ }
  async Task<bool> VerifyAdaptiveNavigation(){
   var results=new Dictionary<string,bool>();
   var nav=(ComboBox)panel!.Tag;int selected=nav.SelectedIndex;double width=panel.Width,height=panel.Height,scale=textScale;
@@ -13,10 +18,11 @@ public partial class MainWindow {
    foreach(var size in new[]{(320d,520d),(360d,600d)})foreach(double zoom in new[]{1d,1.5d,2d}){
     panel.Width=size.Item1;panel.Height=size.Item2;ApplyTextScaleFactor(zoom);
     for(int index=0;index<8;index++){
-     nav.SelectedIndex=index;panel.UpdateLayout();AdaptContent();panel.UpdateLayout();
+     nav.SelectedIndex=index;panel.UpdateLayout();ApplyTextScale(panel);AdaptContent();panel.UpdateLayout();
      var host=(StackPanel)panelScroll!.Content;
      bool reachable=host.DesiredSize.Height<=panelScroll.ViewportHeight+1||panelScroll.VerticalScrollBarVisibility==ScrollBarVisibility.Auto;
      results[$"Reachable-{size.Item1}-{zoom}-{index}"]=reachable&&panelScroll.ScrollableWidth<1;
+     if(index==4&&chosenSources.Count>0)results[$"FolderTextScale-{size.Item1}-{zoom}"]=VisualText(panel).Any(t=>t.IsVisible&&t.Text==chosenSources[0]&&t.FontSize>=12*zoom-.01);
     }
    }
    panel.Width=width;panel.Height=height;ApplyTextScaleFactor(1);nav.SelectedIndex=4;panel.UpdateLayout();

@@ -76,11 +76,11 @@ public partial class MainWindow {
   startupToggle.Click+=(_,_)=>{if(verify)return;try{WindowsStartup.SetEnabled(startupToggle.IsChecked==true);RefreshStartup();}catch(Exception ex){diagnosticResult.Text=ex.Message;RefreshStartup();}};windows.Children.Add(startupToggle);
   startupInfo.TextWrapping=TextWrapping.Wrap;startupInfo.FontSize=12;startupInfo.SetResourceReference(TextBlock.ForegroundProperty,"SecondaryInk");windows.Children.Add(startupInfo);
   var advanced=SettingsAction("\uE713","Avançado",()=>{
-   var menu=NewSettingsMenu();AddMenu(menu,"Declarar que o acervo atual já está online…",DeclareExistingLibrary);
+   var menu=NewSettingsMenu();
    AddMenu(menu,"Abrir recibos de operações",()=>OpenLocal(Path.Combine(Paths.Data,"ui-receipts")));
    AddMenu(menu,"Abrir logs",()=>OpenLocal(Path.Combine(Paths.Home,"logs")));
    AddMenu(menu,"Abrir dados locais",()=>OpenLocal(Paths.Home));
-   AddMenu(menu,"Sobre e configuração atual",()=>ShowSettingsDetails("Sobre e configuração atual",configurationInfo.Text+"\n\n"+Locale.Text("Somente arquivos novos ou modificados. Nenhum original é apagado.")));menu.PlacementTarget=panel;menu.Placement=System.Windows.Controls.Primitives.PlacementMode.MousePoint;menu.IsOpen=true;
+   AddMenu(menu,"Sobre e configuração atual",()=>ShowSettingsDetails("Sobre e configuração atual",configurationInfo.Text+"\n\n"+Locale.Text("Somente arquivos novos ou modificados. Nenhum original é apagado.")));menu.Items.Add(new Separator());AddMenu(menu,"Declarar que o acervo atual já está online…",DeclareExistingLibrary);menu.PlacementTarget=panel;menu.Placement=System.Windows.Controls.Primitives.PlacementMode.MousePoint;menu.IsOpen=true;
   });advanced.HorizontalAlignment=HorizontalAlignment.Stretch;advanced.Margin=new(0,0,0,4);section.Children.Add(advanced);
   return section;
  }

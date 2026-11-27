@@ -15,6 +15,7 @@ public partial class MainWindow {
   if(selected>=4)SelectConfigurationPage(selected-4);
   panelScroll?.ScrollToTop();
   var page=sections[selected<4?selected:4];
+  Dispatcher.BeginInvoke(new Action(()=>{ApplyTextScale(page);AdaptContent();}));
   page.BeginAnimation(OpacityProperty,null);
   if(Animations&&!SystemParameters.HighContrast)
    page.BeginAnimation(OpacityProperty,new DoubleAnimation(.65,1,TimeSpan.FromMilliseconds(120)){FillBehavior=FillBehavior.Stop});
