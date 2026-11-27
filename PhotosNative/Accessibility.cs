@@ -7,7 +7,8 @@ using Windows.UI.ViewManagement;
 namespace PhotosNative;
 public partial class MainWindow {
  UISettings? accessibilitySettings;
- readonly Dictionary<DependencyObject,double> baseTextSizes=new();
+ sealed record BaseTextSize(double Value);
+ readonly System.Runtime.CompilerServices.ConditionalWeakTable<DependencyObject,BaseTextSize> baseTextSizes=new();
  double textScale=1;
  string announced="";
  void InitializeAccessibility(){
@@ -30,7 +31,7 @@ public partial class MainWindow {
   var property=element is TextBlock?TextBlock.FontSizeProperty:element is Control?Control.FontSizeProperty:null;
   if(element is TextBlock glyph && glyph.FontFamily.Source.Contains("Segoe Fluent Icons"))property=null;
   if(property!=null&&(element.ReadLocalValue(property)!=DependencyProperty.UnsetValue||DependencyPropertyHelper.GetValueSource(element,property).BaseValueSource==BaseValueSource.ParentTemplate)){
-   if(!baseTextSizes.TryGetValue(element,out double original)){original=(double)element.GetValue(property);baseTextSizes[element]=original;}
+   double original=baseTextSizes.GetValue(element,key=>new BaseTextSize((double)key.GetValue(property))).Value;
    element.SetValue(property,original*textScale);
   }
   foreach(var child in LogicalTreeHelper.GetChildren(element))if(child is DependencyObject dependency)ApplyTextScale(dependency,visited);
