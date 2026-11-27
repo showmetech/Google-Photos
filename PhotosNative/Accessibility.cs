@@ -23,6 +23,7 @@ public partial class MainWindow {
  void ApplyTextScaleFactor(double scale){
   textScale=Math.Clamp(scale,1,2.25);ApplyTextScale(this);if(panel!=null)ApplyTextScale(panel);
   foreach(var border in new[]{surface,panelSurface})if(border?.Child is Grid grid){double height=SuiteChrome.HeaderHeight*textScale;grid.RowDefinitions[0].Height=new GridLength(height);if(grid.Children.Count>0&&grid.Children[0] is FrameworkElement header)header.Height=height;}
+  AdaptContent();
  }
  void ApplyTextScale(DependencyObject element){
   var property=element is TextBlock?TextBlock.FontSizeProperty:element is Control?Control.FontSizeProperty:null;

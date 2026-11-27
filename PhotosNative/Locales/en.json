@@ -176,7 +176,10 @@
   "Ativado pela política do Windows.": "Enabled by Windows policy.",
   "Desativado pela política do Windows.": "Disabled by Windows policy.",
   "Desativado. Ative para iniciar com o Windows.": "Disabled. Enable to start with Windows.",
-  "Pastas salvas. Conecte sua conta em Configuração → Conta.": "Folders saved. Connect your account in Setup → Account.",
+  "Pastas salvas. Conecte sua conta em Configuração → Conta.": "Folders saved. Connect your account in Account.",
   "Pastas salvas. Verifique os arquivos antes de enviar.": "Folders saved. Check the files before uploading.",
-  "Importe seu cliente OAuth do Google em Configuração → Conta → Mais opções antes de conectar.": "Import your Google OAuth client in Setup → Account → More options before connecting."
+  "Importe seu cliente OAuth do Google em Configuração → Conta → Mais opções antes de conectar.": "Import your Google OAuth client in Account → More options before connecting.",
+  "Ver detalhes": "View details",
+  "Veja os caminhos completos na seção Pastas.": "See full paths in Folders.",
+  "Pastas salvas. O automático está pausado.": "Folders saved. Automatic uploading is paused."
 }
